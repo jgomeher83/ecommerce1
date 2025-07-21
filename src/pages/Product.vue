@@ -60,17 +60,41 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useStore } from '@/store'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/services/firebase'
 
 const route = useRoute()
 const store = useStore()
 
-const productId = parseInt(route.params.id)
+const productId = route.params.id
 const product = ref(null)
 const loading = ref(true)
 const quantity = ref(1)
+
+// Fetch product from Firestore
+const fetchProduct = async () => {
+  try {
+    loading.value = true
+    const productDoc = await getDoc(doc(db, 'products', productId))
+    
+    if (productDoc.exists()) {
+      product.value = {
+        id: productDoc.id,
+        ...productDoc.data()
+      }
+    } else {
+      product.value = null
+    }
+  } catch (error) {
+    console.error('Error fetching product:', error)
+    product.value = null
+  } finally {
+    loading.value = false
+  }
+}
 
 // Set document title based on product
 const updatePageTitle = () => {
@@ -81,34 +105,15 @@ const updatePageTitle = () => {
   }
 }
 
-// Obtener el producto del store
-const findProduct = () => {
-  // Buscar en todos los productos
-  const allProducts = store.products
-  return allProducts.find(p => p.id === productId) || null
-}
-
-// Watch for product changes to update title
-watch(product, () => {
-  updatePageTitle()
+// Watch for route changes to load new product
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    fetchProduct()
+  }
 }, { immediate: true })
 
-// Simular carga de producto
-onMounted(() => {
-  // Set default title while loading
-  document.title = 'Cargando producto... | Tienda'
-  
-  // Si no hay productos en el store, cargarlos primero
-  if (store.products.length === 0) {
-    store.fetchProducts().then(() => {
-      product.value = findProduct()
-      loading.value = false
-    })
-  } else {
-    product.value = findProduct()
-    loading.value = false
-  }
-})
+// Watch for product changes to update title
+watch(product, updatePageTitle, { immediate: true })
 
 const addToCart = () => {
   if (product.value) {

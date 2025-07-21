@@ -125,7 +125,11 @@ const handleSubmit = async () => {
       router.push('/')
     } else {
       // Registrarse
-      const userCredential = await registerUser(formData.value.email, formData.value.password)
+      const additionalData = {
+        displayName: formData.value.email.split('@')[0], // Default username from email
+        isAdmin: false // Explicitly set admin to false for new users
+      }
+      const userCredential = await registerUser(formData.value.email, formData.value.password, additionalData)
       store.user = userCredential.user
       router.push('/')
     }

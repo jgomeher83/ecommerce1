@@ -191,122 +191,152 @@
 
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from '@/store'
-import ProductCard from '@/components/ProductCard.vue'
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { db } from '@/services/firebase'
 
 const store = useStore()
 const products = ref([])
+const isLoading = ref(true)
 
 // Filtros
 const selectedCategories = ref([])
 const priceRange = ref([0, 2000])
 const minRating = ref(0)
 const sortBy = ref('featured')
-const viewMode = ref('grid') // 'grid' or 'list'
+const viewMode = ref('grid')
 
 // Paginación
 const currentPage = ref(1)
 const itemsPerPage = 12
 
-// Obtener productos de la tienda
-onMounted(async () => {
+// Fetch products from Firestore
+const fetchProducts = async () => {
   try {
-    // En una aplicación real, esto vendría de una API
-    await new Promise(resolve => setTimeout(resolve, 500))
-    products.value = store.products.length ? store.products : []
+    isLoading.value = true
+    const productsCollection = collection(db, 'products')
+    let q = productsCollection
     
-    // Calcular el precio máximo para el filtro de rango
-    if (products.value.length > 0) {
-      const maxProductPrice = Math.max(...products.value.map(p => p.price))
-      priceRange.value = [0, Math.ceil(maxProductPrice / 100) * 100] // Redondear al siguiente 100
+    // Apply sorting
+    if (sortBy.value === 'price-asc') {
+      q = query(productsCollection, orderBy('price', 'asc'))
+    } else if (sortBy.value === 'price-desc') {
+      q = query(productsCollection, orderBy('price', 'desc'))
+    } else if (sortBy.value === 'newest') {
+      q = query(productsCollection, orderBy('createdAt', 'desc'))
     }
+    
+    const querySnapshot = await getDocs(q)
+    products.value = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      // Ensure all required fields have default values
+      rating: doc.data().rating || 0,
+      originalPrice: doc.data().originalPrice || null,
+      discount: doc.data().discount || 0
+    }))
+    
+    // Update price range based on actual products
+    if (products.value.length > 0) {
+      const prices = products.value.map(p => p.price)
+      const maxPrice = Math.max(...prices)
+      priceRange.value = [0, Math.ceil(maxPrice / 100) * 100] // Round up to nearest 100
+    }
+    
   } catch (error) {
-    console.error('Error al cargar productos:', error)
+    console.error('Error fetching products:', error)
+  } finally {
+    isLoading.value = false
   }
-})
+}
 
-// Calcular recuentos de categorías
-const categoryCounts = computed(() => {
-  const counts = {}
-  products.value.forEach(product => {
-    counts[product.category] = (counts[product.category] || 0) + 1
-  })
-  return counts
-})
-
-// Obtener todas las categorías únicas
-const allCategories = computed(() => {
-  return [...new Set(products.value.map(p => p.category))]
-})
-
-// Filtrar y ordenar productos
+// Computed properties for filtering and sorting
 const filteredProducts = computed(() => {
-  let result = [...products.value]
+  return products.value.filter(product => {
+    // Filter by category
+    if (selectedCategories.value.length > 0 && !selectedCategories.value.includes(product.category)) {
+      return false
+    }
+    
+    // Filter by price range
+    if (product.price < priceRange.value[0] || product.price > priceRange.value[1]) {
+      return false
+    }
+    
+    // Filter by minimum rating
+    if (product.rating < minRating.value) {
+      return false
+    }
+    
+    return true
+  })
+})
+
+// Sort products
+const sortedProducts = computed(() => {
+  const sorted = [...filteredProducts.value]
   
-  // Filtrar por categoría
-  if (selectedCategories.value.length > 0) {
-    result = result.filter(product => 
-      selectedCategories.value.includes(product.category)
-    )
-  }
-  
-  // Filtrar por rango de precio
-  result = result.filter(product => 
-    product.price >= priceRange.value[0] && 
-    product.price <= priceRange.value[1]
-  )
-  
-  // Filtrar por calificación mínima
-  if (minRating.value > 0) {
-    result = result.filter(product => product.rating >= minRating.value)
-  }
-  
-  // Ordenar
   switch (sortBy.value) {
     case 'price-asc':
-      result.sort((a, b) => a.price - b.price)
-      break
+      return sorted.sort((a, b) => a.price - b.price)
     case 'price-desc':
-      result.sort((a, b) => b.price - a.price)
-      break
+      return sorted.sort((a, b) => b.price - a.price)
     case 'rating':
-      result.sort((a, b) => b.rating - a.rating)
-      break
+      return sorted.sort((a, b) => b.rating - a.rating)
     case 'newest':
-      result.sort((a, b) => b.id - a.id)
-      break
-    // 'featured' es el orden por defecto
+      return sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    default: // 'featured'
+      return sorted
   }
-  
-  return result
 })
 
-// Calcular el precio máximo para el rango
-const maxPrice = computed(() => {
-  if (products.value.length === 0) return 1000
-  return Math.max(...products.value.map(p => p.price))
+// Update products when sort changes
+watch(sortBy, () => {
+  fetchProducts()
 })
 
-// Lógica de paginación
+// Pagination
 const totalPages = computed(() => {
-  return Math.ceil(filteredProducts.value.length / itemsPerPage)
+  return Math.ceil(sortedProducts.value.length / itemsPerPage)
 })
 
 const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   const end = start + itemsPerPage
-  return filteredProducts.value.slice(start, end)
+  return sortedProducts.value.slice(start, end)
+})
+
+// Category counts for filters
+const categoryCounts = computed(() => {
+  const counts = {}
+  products.value.forEach(product => {
+    if (product.category) {
+      counts[product.category] = (counts[product.category] || 0) + 1
+    }
+  })
+  return counts
+})
+
+// Initialize
+onMounted(() => {
+  fetchProducts()
 })
 
 // Resetear todos los filtros
-const resetFilters = () => {
+const resetFilters = async () => {
   selectedCategories.value = []
-  priceRange.value = [0, maxPrice.value]
+  priceRange.value = [0, 2000]
   minRating.value = 0
   sortBy.value = 'featured'
   currentPage.value = 1
+  await fetchProducts() // Recargar productos después de reiniciar filtros
 }
+
+// Watch for sortBy changes
+watch(sortBy, () => {
+  fetchProducts()
+})
 
 // Formatear categorías para mostrar
 const formatCategory = (category) => {

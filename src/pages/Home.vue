@@ -38,105 +38,34 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useStore } from '@/store'
-import ProductCard from '@/components/ProductCard.vue'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '@/services/firebase'
 
 const store = useStore()
 const isLoading = ref(true)
 const products = ref([])
 
-// Sample product data - replace with your actual data fetching logic
-const baseProducts = [
-  {
-    id: 1,
-    name: 'Wireless Headphones',
-    description: 'High-quality wireless headphones with noise cancellation.',
-    price: 199.99,
-    category: 'audio',
-    rating: 4.5,
-    image: 'https://placehold.co/300x300/png?text=Wireless+Headphones'
-  },
-  {
-    id: 2,
-    name: 'Smartphone',
-    description: 'Latest model smartphone with advanced camera features.',
-    price: 899.99,
-    category: 'phones',
-    rating: 4.8,
-    image: 'https://placehold.co/300x300/png?text=Smartphone'
-  },
-  {
-    id: 3,
-    name: 'Laptop',
-    description: 'Powerful laptop for work and entertainment.',
-    price: 1299.99,
-    category: 'computers',
-    rating: 4.7,
-    image: 'https://placehold.co/300x300/png?text=Laptop'
-  },
-  {
-    id: 4,
-    name: 'Smart Watch',
-    description: 'Track your fitness and stay connected.',
-    price: 249.99,
-    category: 'wearables',
-    rating: 4.3,
-    image: 'https://placehold.co/300x300/png?text=Smart+Watch'
-  },
-  {
-    id: 5,
-    name: 'Wireless Earbuds',
-    description: 'Compact wireless earbuds with great sound quality.',
-    price: 129.99,
-    category: 'audio',
-    rating: 4.4,
-    image: 'https://placehold.co/300x300/png?text=Earbuds'
-  },
-  {
-    id: 6,
-    name: 'Tablet',
-    description: 'Portable tablet for work and play.',
-    price: 349.99,
-    category: 'tablets',
-    rating: 4.2,
-    image: 'https://placehold.co/300x300/png?text=Tablet'
-  }
-]
-
-// Generate more products by duplicating and modifying the base products
-const sampleProducts = []
-const categories = ['audio', 'phones', 'computers', 'wearables', 'tablets', 'accessories']
-
-for (let i = 0; i < 50; i++) {
-  const baseProduct = baseProducts[Math.floor(Math.random() * baseProducts.length)]
-  const newProduct = {
-    ...baseProduct,
-    id: i + 1,
-    price: Math.round((baseProduct.price * (0.8 + Math.random() * 0.4)) * 100) / 100, // Random price ±20%
-    rating: Math.round((3.5 + Math.random() * 1.5) * 10) / 10, // Random rating between 3.5 and 5.0
-    category: categories[Math.floor(Math.random() * categories.length)]
-  }
-  sampleProducts.push(newProduct)
-}
-
-onMounted(async () => {
+// Fetch products from Firestore
+const fetchProducts = async () => {
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // In a real app, you would fetch products from your API
-    // await store.fetchProducts()
-    // products.value = store.products
-    
-    // For now, use sample data but only take the first 5 products
-    products.value = sampleProducts.slice(0, 4)
-    store.products = sampleProducts // Still store all products in the store
+    const querySnapshot = await getDocs(collection(db, 'products'))
+    products.value = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+    // Store products in the store for later use
+    store.products = products.value
   } catch (error) {
-    console.error('Failed to load products:', error)
+    console.error('Error fetching products:', error)
   } finally {
     isLoading.value = false
   }
+}
+
+onMounted(async () => {
+  await fetchProducts()
 })
 
 const addToCart = (product) => {

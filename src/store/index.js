@@ -1,4 +1,7 @@
 import { defineStore } from 'pinia'
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/services/firebase'
 
 export const useStore = defineStore('main', {
   state: () => ({
@@ -9,7 +12,8 @@ export const useStore = defineStore('main', {
   }),
   getters: {
     cartCount: (state) => state.cart.reduce((count, item) => count + item.quantity, 0),
-    cartTotal: (state) => state.cart.reduce((total, item) => total + (item.price * item.quantity), 0)
+    cartTotal: (state) => state.cart.reduce((total, item) => total + (item.price * item.quantity), 0),
+    isAdmin: (state) => state.user?.isAdmin || false
   },
   actions: {
     async fetchProducts() {
@@ -21,6 +25,22 @@ export const useStore = defineStore('main', {
         console.error('Error fetching products:', error)
       } finally {
         this.isLoading = false
+      }
+    },
+    async setUser(userData) {
+      if (userData) {
+        // Get additional user data from Firestore
+        const userDoc = await getDoc(doc(db, 'users', userData.uid))
+        this.user = {
+          uid: userData.uid,
+          email: userData.email,
+          displayName: userData.displayName,
+          photoURL: userData.photoURL,
+          isAdmin: userDoc.exists() ? userDoc.data().isAdmin || false : false,
+          ...userData
+        }
+      } else {
+        this.user = null
       }
     },
     addToCart(product) {
@@ -45,6 +65,13 @@ export const useStore = defineStore('main', {
     },
     clearCart() {
       this.cart = []
+    },
+    // Initialize auth state listener
+    initAuth() {
+      const auth = getAuth()
+      onAuthStateChanged(auth, async (user) => {
+        await this.setUser(user)
+      })
     }
   },
   // Habilitar persistencia para todo el store

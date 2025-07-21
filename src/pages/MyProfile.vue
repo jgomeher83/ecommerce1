@@ -143,6 +143,109 @@
               </div>
             </div>
           </div>
+
+          <!-- Admin Panel -->
+          <div v-else-if="activeTab === 'admin'" class="tab-pane">
+            <h3>Administración de Productos</h3>
+            
+            <div class="admin-section">
+              <h4>Agregar Nuevo Producto</h4>
+              <form @submit.prevent="addProduct" class="product-form">
+                <div class="form-group">
+                  <label for="productName">Nombre del Producto</label>
+                  <input 
+                    type="text" 
+                    id="productName" 
+                    v-model="newProduct.name" 
+                    required
+                    placeholder="Nombre del producto"
+                  >
+                </div>
+                
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="productPrice">Precio</label>
+                    <input 
+                      type="number" 
+                      id="productPrice" 
+                      v-model.number="newProduct.price" 
+                      required
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                    >
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="productStock">Stock</label>
+                    <input 
+                      type="number" 
+                      id="productStock" 
+                      v-model.number="newProduct.stock" 
+                      required
+                      min="0"
+                      placeholder="0"
+                    >
+                  </div>
+                </div>
+                
+                <div class="form-group">
+                  <label for="productCategory">Categoría</label>
+                  <input 
+                    type="text" 
+                    id="productCategory" 
+                    v-model="newProduct.category" 
+                    required
+                    placeholder="Categoría del producto"
+                  >
+                </div>
+                
+                <!-- <div class="form-group">
+                  <label for="productImage">URL de la Imagen</label>
+                  <input 
+                    type="url" 
+                    id="productImage" 
+                    v-model="newProduct.image" 
+                    required
+                    placeholder="https://ejemplo.com/imagen.jpg"
+                  >
+                </div> -->
+                
+                <div class="form-group">
+                  <label for="productDescription">Descripción</label>
+                  <textarea 
+                    id="productDescription" 
+                    v-model="newProduct.description" 
+                    rows="3"
+                    required
+                    placeholder="Descripción detallada del producto"
+                  ></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                  Agregar Producto
+                </button>
+              </form>
+              
+              <div class="products-list" v-if="products.length > 0">
+                <h4>Productos Existentes</h4>
+                <div class="product-grid">
+                  <div v-for="product in products" :key="product.id" class="product-card">
+                    <img :src="product.image" :alt="product.name" class="product-image">
+                    <div class="product-details">
+                      <h5>{{ product.name }}</h5>
+                      <p class="product-price">${{ product.price.toFixed(2) }}</p>
+                      <p class="product-stock">Stock: {{ product.stock }}</p>
+                      <p class="product-category">{{ product.category }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-state">
+                <p>No hay productos registrados.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -153,20 +256,30 @@
 import { ref, computed, onMounted } from 'vue'
 import { useStore } from '@/store'
 import { useRouter } from 'vue-router'
-import { logoutUser, updateUserProfile } from '@/services/firebase'
+import { logoutUser, updateUserProfile, db } from '@/services/firebase'
+import { collection, getDocs, addDoc } from 'firebase/firestore'
 
 const store = useStore()
 const router = useRouter()
 
 // Datos del usuario
 const user = computed(() => store.user)
+const isAdmin = computed(() => store.user?.isAdmin || false)
 
 // Pestañas del perfil
-const tabs = [
-  { id: 'profile', label: 'Perfil' },
-  { id: 'orders', label: 'Mis Pedidos' },
-  { id: 'settings', label: 'Configuración' }
-]
+const tabs = computed(() => {
+  const baseTabs = [
+    { id: 'profile', label: 'Perfil' },
+    { id: 'orders', label: 'Mis Pedidos' },
+    { id: 'settings', label: 'Configuración' }
+  ]
+  
+  if (isAdmin.value) {
+    baseTabs.splice(1, 0, { id: 'admin', label: 'Administración' })
+  }
+  
+  return baseTabs
+})
 
 const activeTab = ref('profile')
 
@@ -207,6 +320,17 @@ const orders = ref([
 
 // Estados
 const isUpdating = ref(false)
+
+// Admin state
+const products = ref([])
+const newProduct = ref({
+  name: '',
+  price: 0,
+  description: '',
+  category: '',
+  image: '',
+  stock: 0
+})
 
 // Métodos
 const formatDate = (dateString) => {
@@ -250,11 +374,54 @@ const logout = async () => {
   }
 }
 
-// Inicializar datos del perfil
-onMounted(() => {
+const loadProducts = async () => {
+  if (!isAdmin.value) return
+  
+  try {
+    const querySnapshot = await getDocs(collection(db, 'products'))
+    products.value = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+  } catch (error) {
+    console.error('Error loading products:', error)
+  }
+}
+
+const addProduct = async () => {
+  if (!isAdmin.value) return
+  
+  try {
+    await addDoc(collection(db, 'products'), {
+      ...newProduct.value,
+      price: Number(newProduct.value.price),
+      stock: Number(newProduct.value.stock),
+      createdAt: new Date().toISOString()
+    })
+    
+    // Reset form and reload products
+    newProduct.value = {
+      name: '',
+      price: 0,
+      description: '',
+      category: '',
+      image: '',
+      stock: 0
+    }
+    
+    await loadProducts()
+  } catch (error) {
+    console.error('Error adding product:', error)
+  }
+}
+
+// Load products when component mounts and user is admin
+onMounted(async () => {
   if (store.user) {
     profileData.value.displayName = store.user.displayName || ''
-    // Cargar más datos del perfil si es necesario
+    if (isAdmin.value) {
+      await loadProducts()
+    }
   }
 })
 </script>
@@ -706,5 +873,97 @@ input:checked + .slider:before {
   .danger-actions .btn {
     width: 100%;
   }
+}
+
+/* Admin styles */
+.admin-section {
+  margin-top: 2rem;
+}
+
+.product-form {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.product-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.product-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.product-details {
+  padding: 1rem;
+}
+
+.product-price {
+  font-weight: bold;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  margin: 0.5rem 0;
+}
+
+.product-stock {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0.25rem 0;
+}
+
+.product-category {
+  display: inline-block;
+  background: #f0f0f0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #555;
+  margin-top: 0.5rem;
+}
+
+textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  color: #666;
 }
 </style>

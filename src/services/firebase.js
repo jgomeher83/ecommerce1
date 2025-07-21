@@ -7,6 +7,7 @@ import {
   onAuthStateChanged,
   updateProfile
 } from 'firebase/auth'
+import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore'
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -21,10 +22,32 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
+const db = getFirestore(app)
 
 // Auth functions
-export const registerUser = (email, password) => {
-  return createUserWithEmailAndPassword(auth, email, password)
+export const registerUser = async (email, password, additionalData = {}) => {
+  try {
+    // Create user in Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    const user = userCredential.user
+    
+    // Create user document in Firestore
+    const userData = {
+      uid: user.uid,
+      email: user.email,
+      createdAt: serverTimestamp(),
+      isAdmin: false, // Default admin status
+      ...additionalData
+    }
+    
+    // Store user data in Firestore
+    await setDoc(doc(db, 'users', user.uid), userData)
+    
+    return userCredential
+  } catch (error) {
+    console.error('Error registering user:', error)
+    throw error
+  }
 }
 
 export const loginUser = (email, password) => {
@@ -40,7 +63,15 @@ export const updateUserProfile = async (userData) => {
   if (!user) throw new Error('No hay usuario autenticado');
   
   try {
+    // Update auth profile
     await updateProfile(user, userData);
+    
+    // Update Firestore user document
+    if (user.uid) {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, userData, { merge: true });
+    }
+    
     return { success: true };
   } catch (error) {
     console.error('Error al actualizar el perfil:', error);
@@ -61,4 +92,4 @@ export const getCurrentUser = () => {
   })
 }
 
-export { auth }
+export { auth, db }
