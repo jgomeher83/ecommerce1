@@ -7,7 +7,7 @@
       </section>
       
       <section class="featured-products">
-        <h2>Featured Products</h2>
+        <h2>Productos</h2>
         <div class="product-grid">
           <div v-if="isLoading" class="loading">
             <div v-for="n in 4" :key="n" class="product-card loading">
@@ -23,7 +23,7 @@
                 <img :src="product.image" :alt="product.name" class="product-image" />
                 <div class="product-info">
                   <h3>{{ product.name }}</h3>
-                  <p class="price">${{ product.price.toFixed(2) }}</p>
+                  <p class="price">${{ formatPrice(product.price) }}</p>
                 </div>
               </router-link>
               <button @click.stop="addToCart(product)" class="add-to-cart">
@@ -46,6 +46,15 @@ import { db } from '@/services/firebase'
 const store = useStore()
 const isLoading = ref(true)
 const products = ref([])
+
+// Price formatting function
+const formatPrice = (price) => {
+  const number = Number(price);
+  return number.toLocaleString('es-CO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
 
 // Fetch products from Firestore
 const fetchProducts = async () => {

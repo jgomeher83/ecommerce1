@@ -19,8 +19,8 @@
           <h1>{{ product.name }}</h1>
           
           <div class="price-container">
-            <span class="price">${{ product.price.toFixed(2) }}</span>
-            <span v-if="product.originalPrice" class="original-price">${{ product.originalPrice.toFixed(2) }}</span>
+            <span class="price">${{ formatPrice(product.price) }}</span>
+            <span v-if="product.originalPrice" class="original-price">${{ formatPrice(product.originalPrice) }}</span>
           </div>
           
           <p class="description">{{ product.description || 'No hay descripción disponible para este producto.' }}</p>
@@ -73,6 +73,15 @@ const productId = route.params.id
 const product = ref(null)
 const loading = ref(true)
 const quantity = ref(1)
+
+// Price formatting function
+const formatPrice = (price) => {
+  const number = Number(price);
+  return number.toLocaleString('es-CO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
 
 // Fetch product from Firestore
 const fetchProduct = async () => {

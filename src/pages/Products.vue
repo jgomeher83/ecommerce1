@@ -139,8 +139,8 @@
                   <h3>{{ product.name }}</h3>
                   <p class="category">{{ product.category }}</p>
                   <div class="price-container">
-                    <span class="price">${{ product.price.toFixed(2) }}</span>
-                    <span v-if="product.originalPrice" class="original-price">${{ product.originalPrice.toFixed(2) }}</span>
+                    <span class="price">${{ formatPrice(product.price) }}</span>
+                    <span v-if="product.originalPrice" class="original-price">${{ formatPrice(product.originalPrice) }}</span>
                   </div>
                   <div class="rating">
                     <i v-for="i in 5" :key="i" :class="i <= Math.round(product.rating) ? 'fas fa-star' : 'far fa-star'"></i>
@@ -341,6 +341,15 @@ watch(sortBy, () => {
 // Formatear categorías para mostrar
 const formatCategory = (category) => {
   return category.charAt(0).toUpperCase() + category.slice(1)
+}
+
+// Price formatting function
+const formatPrice = (price) => {
+  const number = Number(price);
+  return number.toLocaleString('es-CO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 }
 
 // Agregar al carrito

@@ -87,12 +87,12 @@
                       <div class="item-details">
                         <h5>{{ item.name }}</h5>
                         <p class="item-quantity">Cantidad: {{ item.quantity }}</p>
-                        <p class="item-price">${{ item.price.toFixed(2) }}</p>
+                        <p class="item-price">${{ formatPrice(item.price) }}</p>
                       </div>
                     </div>
                   </div>
                   <div class="order-total">
-                    <p>Total: <strong>${{ order.total.toFixed(2) }}</strong></p>
+                    <p>Total: <strong>${{ formatPrice(order.total) }}</strong></p>
                     <router-link :to="`/orders/${order.id}`" class="btn btn-outline">Ver detalle</router-link>
                   </div>
                 </div>
@@ -148,101 +148,137 @@
           <div v-else-if="activeTab === 'admin'" class="tab-pane">
             <h3>Administración de Productos</h3>
             
+            <!-- Admin View Tabs -->
+            <div class="admin-tabs">
+              <button 
+                :class="['admin-tab', { 'active': adminViewMode === 'new' }]"
+                @click="adminViewMode = 'new'"
+              >
+                Nuevo Producto
+              </button>
+              <button 
+                :class="['admin-tab', { 'active': adminViewMode === 'existing' }]"
+                @click="adminViewMode = 'existing'"
+              >
+                Productos Existentes
+              </button>
+            </div>
+            
             <div class="admin-section">
-              <h4>Agregar Nuevo Producto</h4>
-              <form @submit.prevent="addProduct" class="product-form">
-                <div class="form-group">
-                  <label for="productName">Nombre del Producto</label>
-                  <input 
-                    type="text" 
-                    id="productName" 
-                    v-model="newProduct.name" 
-                    required
-                    placeholder="Nombre del producto"
-                  >
-                </div>
-                
-                <div class="form-row">
+              <!-- New Product Form -->
+              <div v-if="adminViewMode === 'new'">
+                <h4>Agregar Nuevo Producto</h4>
+                <form @submit.prevent="addProduct" class="product-form">
                   <div class="form-group">
-                    <label for="productPrice">Precio</label>
+                    <label for="productName">Nombre del Producto</label>
                     <input 
-                      type="number" 
-                      id="productPrice" 
-                      v-model.number="newProduct.price" 
+                      type="text" 
+                      id="productName" 
+                      v-model="newProduct.name" 
                       required
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
+                      placeholder="Nombre del producto"
+                    >
+                  </div>
+                  
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="productPrice">Precio</label>
+                      <input 
+                        type="number" 
+                        id="productPrice" 
+                        v-model.number="newProduct.price" 
+                        required
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      >
+                    </div>
+                    
+                    <div class="form-group">
+                      <label for="productStock">Stock</label>
+                      <input 
+                        type="number" 
+                        id="productStock" 
+                        v-model.number="newProduct.stock" 
+                        required
+                        min="0"
+                        placeholder="0"
+                      >
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="productImage">URL de la Imagen</label>
+                    <input 
+                      type="url" 
+                      id="productImage" 
+                      v-model="imageInput"
+                      @input="updateImagePreview"
+                      placeholder="https://ejemplo.com/imagen.jpg o enlace de Google Drive"
+                      class="form-control"
+                    >
+                    <small class="text-muted">Para Google Drive, usa el enlace de compartir y lo convertiremos automáticamente</small>
+                    <div v-if="newProduct.image" class="mt-2">
+                      <p>Vista previa:</p>
+                      <img :src="newProduct.image" :alt="'Imagen de ' + newProduct.name" class="img-preview" @error="handleImageError">
+                    </div>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="productCategory">Categoría</label>
+                    <input 
+                      type="text" 
+                      id="productCategory" 
+                      v-model="newProduct.category" 
+                      required
+                      placeholder="Categoría del producto"
                     >
                   </div>
                   
                   <div class="form-group">
-                    <label for="productStock">Stock</label>
-                    <input 
-                      type="number" 
-                      id="productStock" 
-                      v-model.number="newProduct.stock" 
+                    <label for="productDescription">Descripción</label>
+                    <textarea 
+                      id="productDescription" 
+                      v-model="newProduct.description" 
+                      rows="3"
                       required
-                      min="0"
-                      placeholder="0"
-                    >
+                      placeholder="Descripción detallada del producto"
+                    ></textarea>
                   </div>
-                </div>
-                
-                <div class="form-group">
-                  <label for="productCategory">Categoría</label>
-                  <input 
-                    type="text" 
-                    id="productCategory" 
-                    v-model="newProduct.category" 
-                    required
-                    placeholder="Categoría del producto"
-                  >
-                </div>
-                
-                <!-- <div class="form-group">
-                  <label for="productImage">URL de la Imagen</label>
-                  <input 
-                    type="url" 
-                    id="productImage" 
-                    v-model="newProduct.image" 
-                    required
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                  >
-                </div> -->
-                
-                <div class="form-group">
-                  <label for="productDescription">Descripción</label>
-                  <textarea 
-                    id="productDescription" 
-                    v-model="newProduct.description" 
-                    rows="3"
-                    required
-                    placeholder="Descripción detallada del producto"
-                  ></textarea>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">
-                  Agregar Producto
-                </button>
-              </form>
+                  
+                  <button type="submit" class="btn btn-primary">
+                    {{ isEditing ? 'Actualizar Producto' : 'Agregar Producto' }}
+                  </button>
+                </form>
+              </div>
               
-              <div class="products-list" v-if="products.length > 0">
+              <!-- Existing Products List -->
+              <div v-else-if="adminViewMode === 'existing'">
                 <h4>Productos Existentes</h4>
-                <div class="product-grid">
-                  <div v-for="product in products" :key="product.id" class="product-card">
-                    <img :src="product.image" :alt="product.name" class="product-image">
-                    <div class="product-details">
-                      <h5>{{ product.name }}</h5>
-                      <p class="product-price">${{ product.price.toFixed(2) }}</p>
-                      <p class="product-stock">Stock: {{ product.stock }}</p>
-                      <p class="product-category">{{ product.category }}</p>
+                <div class="products-list" v-if="products.length > 0">
+                  <div class="product-grid">
+                    <div v-for="product in products" :key="product.id" class="product-card">
+                      <img :src="convertDriveUrl(product.image)" :alt="product.name" class="product-image">
+                      <div class="product-details">
+                        <h5>{{ product.name }}</h5>
+                        <p class="product-price">${{ formatPrice(product.price) }}</p>
+                        <p class="product-stock">Stock: {{ product.stock }}</p>
+                        <p class="product-category">{{ product.category }}</p>
+                        <div class="product-actions">
+                          <button 
+                            @click="editProduct(product)" 
+                            class="btn btn-primary btn-sm"
+                          >
+                            <i class="fas fa-edit"></i> Editar
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div v-else class="empty-state">
-                <p>No hay productos registrados.</p>
+                <div v-else class="empty-state">
+                  <p>No hay productos registrados.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -257,7 +293,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useStore } from '@/store'
 import { useRouter } from 'vue-router'
 import { logoutUser, updateUserProfile, db } from '@/services/firebase'
-import { collection, getDocs, addDoc } from 'firebase/firestore'
+import { collection, getDocs, addDoc, updateDoc, doc } from 'firebase/firestore'
 
 const store = useStore()
 const router = useRouter()
@@ -322,21 +358,33 @@ const orders = ref([
 const isUpdating = ref(false)
 
 // Admin state
+const adminViewMode = ref('new') // 'new' or 'existing'
+const isEditing = ref(false)
+const currentProductId = ref(null)
 const products = ref([])
 const newProduct = ref({
   name: '',
   price: 0,
   description: '',
   category: '',
-  image: '',
+  image: 'https://via.placeholder.com/300',
   stock: 0
 })
+const imageInput = ref('')
 
 // Métodos
 const formatDate = (dateString) => {
   if (!dateString) return ''
   const options = { year: 'numeric', month: 'long', day: 'numeric' }
   return new Date(dateString).toLocaleDateString('es-ES', options)
+}
+
+const formatPrice = (price) => {
+  const number = Number(price);
+  return number.toLocaleString('es-CO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 }
 
 const updateProfile = async () => {
@@ -388,31 +436,140 @@ const loadProducts = async () => {
   }
 }
 
+const convertDriveUrl = (url) => {
+  if (!url) return 'https://via.placeholder.com/300';
+  
+  try {
+    // If it's already a direct Google Drive image URL, return as is
+    if (url.includes('drive.google.com/uc?')) {
+      return url;
+    }
+    
+    // If it's a Google Drive URL
+    if (url.includes('drive.google.com') || url.match(/^[a-zA-Z0-9_-]{25,}$/)) {
+      let fileId = '';
+      
+      // Handle full Google Drive URL
+      if (url.includes('drive.google.com')) {
+        // Format: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+        const fileMatch = url.match(/[\/\=]([a-zA-Z0-9_-]{25,})/);
+        if (fileMatch) {
+          fileId = fileMatch[1];
+        }
+      } 
+      // Handle case where only the fileId is stored
+      else if (url.match(/^[a-zA-Z0-9_-]{25,}$/)) {
+        fileId = url;
+      }
+      
+      if (fileId) {
+        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+      }
+    }
+    
+    // Return the original URL if it's not a Google Drive URL
+    return url || 'https://via.placeholder.com/300';
+  } catch (e) {
+    console.error('Error converting URL:', e);
+    return 'https://via.placeholder.com/300';
+  }
+}
+
+const updateImagePreview = () => {
+  const convertedUrl = convertDriveUrl(imageInput.value);
+  newProduct.value.image = convertedUrl;
+}
+
+const handleImageError = (event) => {
+  // Show a placeholder if the image fails to load
+  event.target.src = 'https://via.placeholder.com/300';
+  
+  // If it was a Google Drive link, try the direct download URL format
+  if (imageInput.value) {
+    try {
+      const directUrl = convertDriveUrl(imageInput.value);
+      if (directUrl !== event.target.src) {
+        event.target.src = directUrl;
+        newProduct.value.image = directUrl;
+      }
+    } catch (e) {
+      console.error('Error handling image URL:', e);
+    }
+  }
+}
+
+const editProduct = (product) => {
+  isEditing.value = true;
+  currentProductId.value = product.id;
+  
+  // Switch to the new product tab
+  adminViewMode.value = 'new';
+  
+  // Populate the form with product data
+  newProduct.value = {
+    name: product.name,
+    price: product.price,
+    description: product.description || '',
+    category: product.category,
+    image: convertDriveUrl(product.image) || 'https://via.placeholder.com/300',
+    stock: product.stock || 0
+  }
+  
+  // Set the image input to the original URL
+  imageInput.value = product.image;
+  
+  // Scroll to the form
+  setTimeout(() => {
+    const form = document.querySelector('.product-form');
+    if (form) {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 100);
+}
+
 const addProduct = async () => {
   if (!isAdmin.value) return
   
   try {
-    await addDoc(collection(db, 'products'), {
+    const productData = {
       ...newProduct.value,
       price: Number(newProduct.value.price),
       stock: Number(newProduct.value.stock),
-      createdAt: new Date().toISOString()
-    })
-    
-    // Reset form and reload products
-    newProduct.value = {
-      name: '',
-      price: 0,
-      description: '',
-      category: '',
-      image: '',
-      stock: 0
+      updatedAt: new Date().toISOString()
     }
     
+    if (isEditing.value && currentProductId.value) {
+      // Update existing product
+      await updateDoc(doc(db, 'products', currentProductId.value), productData)
+      alert('Producto actualizado correctamente')
+    } else {
+      // Create new product
+      productData.createdAt = new Date().toISOString()
+      await addDoc(collection(db, 'products'), productData)
+      alert('Producto agregado correctamente')
+    }
+    
+    // Reset form and reload products
+    resetProductForm()
     await loadProducts()
   } catch (error) {
-    console.error('Error adding product:', error)
+    console.error('Error saving product:', error)
+    alert('Error al guardar el producto. Por favor, inténtalo de nuevo.')
   }
+}
+
+const resetProductForm = () => {
+  newProduct.value = {
+    name: '',
+    price: 0,
+    description: '',
+    category: '',
+    image: 'https://via.placeholder.com/300',
+    stock: 0
+  }
+  imageInput.value = ''
+  isEditing.value = false
+  currentProductId.value = null
 }
 
 // Load products when component mounts and user is admin
@@ -599,8 +756,8 @@ h1 {
 }
 
 .order-header h4 {
-  margin: 0 0 0.25rem;
   font-size: 1rem;
+  margin: 0 0 0.25rem;
 }
 
 .order-date {
@@ -773,6 +930,33 @@ input:checked + .slider:before {
   margin-top: 1rem;
 }
 
+.product-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
+}
+
+.btn-primary {
+  background-color: #3182ce;
+  color: white;
+  border: 1px solid transparent;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-primary:hover {
+  background-color: #2c5282;
+  transform: translateY(-1px);
+}
+
+.fas {
+  margin-right: 0.35rem;
+}
 /* Estado vacío */
 .empty-state {
   text-align: center;
@@ -965,5 +1149,72 @@ textarea {
   background: #f9f9f9;
   border-radius: 8px;
   color: #666;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+}
+
+.admin-tab {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px 6px 0 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #f8fafc;
+  color: #4a5568;
+  border: 1px solid transparent;
+  border-bottom: none;
+  position: relative;
+  bottom: -1px;
+}
+
+.admin-tab:hover {
+  background-color: #edf2f7;
+  color: #2d3748;
+}
+
+.admin-tab.active {
+  background-color: white;
+  color: #3182ce;
+  border-color: #e2e8f0;
+  border-bottom-color: white;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.admin-tab.active:hover {
+  background-color: white;
+}
+
+.img-preview {
+  max-width: 200px;
+  max-height: 200px;
+  object-fit: contain;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 8px;
+  background-color: #f8f9fa;
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.text-muted {
+  color: #6c757d;
+  font-size: 0.875em;
+  display: block;
+  margin-top: 0.25rem;
 }
 </style>

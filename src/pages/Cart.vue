@@ -23,6 +23,7 @@
           <div class="cart-item" v-for="item in cartItems" :key="item.id">
             <div class="item-image">
               <router-link :to="`/products/${item.id}`">
+       
                 <img :src="item.image" :alt="item.name" @error="handleImageError">
               </router-link>
             </div>
@@ -40,9 +41,9 @@
               <p class="item-category">{{ formatCategory(item.category) }}</p>
               
               <div class="item-price">
-                ${{ item.price.toFixed(2) }}
+                ${{ formatPrice(item.price) }}
                 <span v-if="item.originalPrice" class="original-price">
-                  ${{ item.originalPrice.toFixed(2) }}
+                  ${{ formatPrice(item.originalPrice) }}
                 </span>
               </div>
               
@@ -71,22 +72,22 @@
           
           <div class="summary-row">
             <span>Subtotal ({{ totalItems }} {{ totalItems === 1 ? 'producto' : 'productos' }})</span>
-            <span>${{ subtotal.toFixed(2) }}</span>
+            <span>${{ formatPrice(subtotal) }}</span>
           </div>
           
           <div class="summary-row">
             <span>Envío</span>
-            <span>{{ shippingCost === 0 ? 'Gratis' : `$${shippingCost.toFixed(2)}` }}</span>
+            <span>{{ shippingCost === 0 ? 'Gratis' : `$${formatPrice(shippingCost)}` }}</span>
           </div>
           
           <div v-if="discount > 0" class="summary-row discount">
             <span>Descuento</span>
-            <span>-${{ discount.toFixed(2) }}</span>
+            <span>-${{ formatPrice(discount) }}</span>
           </div>
           
           <div class="summary-row total">
             <span>Total</span>
-            <span>${{ total.toFixed(2) }}</span>
+            <span>${{ formatPrice(total) }}</span>
           </div>
           
           <button 
@@ -145,6 +146,15 @@ const discount = computed(() => {
 const total = computed(() => {
   return subtotal.value + shippingCost.value - discount.value
 })
+
+// Price formatting function
+const formatPrice = (price) => {
+  const number = Number(price);
+  return number.toLocaleString('es-CO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
 
 // Métodos
 const updateQuantity = (productId, newQuantity) => {
