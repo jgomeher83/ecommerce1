@@ -11,6 +11,27 @@ export default defineConfig({
   },
   server: {
     port: 1037,
-    open: true
+    open: true,
+    historyApiFallback: true,
+    proxy: {
+      // Add this if you have API routes that need to be proxied
+      // '/api': {
+      //   target: 'http://your-api-url',
+      //   changeOrigin: true,
+      //   rewrite: (path) => path.replace(/^\/api/, '')
+      // }
+    }
+  },
+  // This is important for client-side routing in production
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vue: ['vue', 'vue-router', 'pinia']
+        }
+      }
+    }
   }
 })
