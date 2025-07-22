@@ -3,21 +3,21 @@
     <header class="header">
       <div class="container">
         <div class="logo">
-          <router-link to="/">E-Commerce</router-link>
+          <router-link to="/">Apúntate el Paseo</router-link>
         </div>
         <nav class="nav">
-          <router-link to="/" class="nav-link">Home</router-link>
-          <router-link to="/products" class="nav-link">Products</router-link>
-          <router-link to="/myprofile" class="nav-link">My Profile</router-link>
+          <router-link to="/" class="nav-link">Inicio</router-link>
+          <router-link to="/products" class="nav-link">Destinos</router-link>
+          <router-link to="/myprofile" class="nav-link">Mi Perfil</router-link>
           <router-link to="/cart" class="nav-link">
-            Cart
+            Mis compras
             <span v-if="cartCount > 0" class="cart-count">{{ cartCount }}</span>
           </router-link>
-          <router-link v-if="!user" to="/login" class="nav-link">Login</router-link>
-          <a v-else href="#" @click.prevent="logout" class="nav-link">Logout</a>
+          <router-link v-if="!user" to="/login" class="nav-link">Iniciar sesión</router-link>
+          <a v-else href="#" @click.prevent="logout" class="nav-link">Cerrar sesión</a>
         </nav>
       </div>
-    </header>
+    </header>I
 
     <main class="main">
       <slot></slot>
@@ -25,7 +25,7 @@
 
     <footer class="footer">
       <div class="container">
-        <p>&copy; {{ new Date().getFullYear() }} E-Commerce Store. All rights reserved.</p>
+        <p>&copy; {{ new Date().getFullYear() }} Apúntate el Paseo. Todos los derechos reservados.</p>
       </div>
     </footer>
   </div>

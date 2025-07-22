@@ -2,12 +2,12 @@
   <div class="home">
     <main class="container">
       <section class="hero">
-        <h1>Welcome to Our Store</h1>
-        <p class="subtitle">Discover amazing products at great prices</p>
+        <h1 >Apúntate el Paseo </h1>
+        <p> Viaja, vive, recuerda!</p>
       </section>
       
       <section class="featured-products">
-        <h2>Productos</h2>
+        <h2>Destinos</h2>
         <div class="product-grid">
           <div v-if="isLoading" class="loading">
             <div v-for="n in 4" :key="n" class="product-card loading">

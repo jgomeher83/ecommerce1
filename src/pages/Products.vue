@@ -2,7 +2,7 @@
   <div class="products-page">
     <div class="container">
       <div class="products-header">
-        <h1>Nuestros Productos</h1>
+        <h1>Nuestros Destinos</h1>
         <div class="products-count">{{ filteredProducts.length }} productos encontrados</div>
       </div>
 
