@@ -437,7 +437,7 @@ const loadProducts = async () => {
 }
 
 const convertDriveUrl = (url) => {
-  if (!url) return 'https://via.placeholder.com/300';
+  // if (!url) return 'https://via.placeholder.com/300';
   
   try {
     // If it's already a direct Google Drive image URL, return as is
@@ -468,10 +468,10 @@ const convertDriveUrl = (url) => {
     }
     
     // Return the original URL if it's not a Google Drive URL
-    return url || 'https://via.placeholder.com/300';
+    return url;
   } catch (e) {
     console.error('Error converting URL:', e);
-    return 'https://via.placeholder.com/300';
+    return '';
   }
 }
 
@@ -482,7 +482,7 @@ const updateImagePreview = () => {
 
 const handleImageError = (event) => {
   // Show a placeholder if the image fails to load
-  event.target.src = 'https://via.placeholder.com/300';
+  // event.target.src = 'https://via.placeholder.com/300';
   
   // If it was a Google Drive link, try the direct download URL format
   if (imageInput.value) {
@@ -511,7 +511,7 @@ const editProduct = (product) => {
     price: product.price,
     description: product.description || '',
     category: product.category,
-    image: convertDriveUrl(product.image) || 'https://via.placeholder.com/300',
+    image: convertDriveUrl(product.image),
     stock: product.stock || 0
   }
   
@@ -564,7 +564,7 @@ const resetProductForm = () => {
     price: 0,
     description: '',
     category: '',
-    image: 'https://via.placeholder.com/300',
+    image: '',
     stock: 0
   }
   imageInput.value = ''
