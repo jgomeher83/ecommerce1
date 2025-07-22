@@ -2,8 +2,8 @@
   <div class="home">
     <main class="container">
       <section class="hero">
-        <h1 >Apúntate el Paseo </h1>
-        <p> Viaja, vive, recuerda!</p>
+        <h1>Apúntate el Paseo</h1>
+        <p class="subtitle">Viaja, vive, recuerda!</p>
       </section>
       
       <section class="featured-products">
@@ -84,35 +84,46 @@ const addToCart = (product) => {
 
 <style scoped>
 .home {
-  padding: 2rem 0;
+  padding: 1rem 0;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .hero {
   text-align: center;
-  margin-bottom: 3rem;
-  padding: 3rem 1rem;
+  margin: 1rem 0 2rem;
+  padding: 2rem 1rem;
   background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
   border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
-  font-size: 2.5rem;
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
   margin-bottom: 0.5rem;
   color: var(--primary-color);
+  line-height: 1.2;
 }
 
 .subtitle {
-  font-size: 1.2rem;
+  font-size: clamp(1rem, 3vw, 1.2rem);
   color: var(--secondary-color);
-  margin-bottom: 1.5rem;
+  margin: 0;
 }
 
 .featured-products {
-  margin-top: 3rem;
+  margin: 2rem 0;
 }
 
 h2 {
-  font-size: 1.8rem;
+  font-size: clamp(1.5rem, 4vw, 1.8rem);
   margin-bottom: 1.5rem;
   color: var(--dark-color);
   text-align: center;
@@ -120,15 +131,15 @@ h2 {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
   margin-top: 1.5rem;
 }
 
 .loading {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
   width: 100%;
 }
 
@@ -156,75 +167,130 @@ h2 {
   text-decoration: none;
   color: inherit;
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  transition: transform 0.2s ease;
+}
+
+.product-link:active {
+  transform: scale(0.98);
 }
 
 .product-image {
   width: 100%;
-  height: 200px;
+  height: 180px;
   object-fit: cover;
   border-radius: 8px;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.product-card:hover .product-image {
+  transform: translateY(-4px);
 }
 
 .product-info {
-  padding: 0.5rem 0;
+  padding: 0.5rem 0.25rem;
 }
 
 .product-info h3 {
   margin: 0.25rem 0;
   color: #1f2937;
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .price {
   font-weight: bold;
   color: #3b82f6;
   margin: 0.5rem 0;
+  font-size: 1.1rem;
 }
 
 .add-to-cart {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.6rem;
   background: #3b82f6;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.add-to-cart:active {
+  transform: scale(0.97);
 }
 
 .add-to-cart:hover {
   background: #2563eb;
 }
 
+/* Responsive adjustments */
 @media (max-width: 768px) {
-  .product-grid {
+  .home {
+    padding: 0.5rem 0;
+  }
+  
+  .hero {
+    padding: 1.5rem 1rem;
+    margin: 0.5rem 0 1.5rem;
+  }
+  
+  .product-grid,
+  .loading {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.25rem;
   }
   
-  h1 {
-    font-size: 2rem;
-  }
-  
-  .subtitle {
-    font-size: 1rem;
+  .product-image {
+    height: 160px;
   }
 }
 
 @media (max-width: 480px) {
-  .product-grid {
-    grid-template-columns: 1fr;
+  .product-grid,
+  .loading {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
   }
   
-  .hero {
-    padding: 2rem 1rem;
+  .product-image {
+    height: 140px;
   }
   
-  h1 {
-    font-size: 1.75rem;
+  .add-to-cart {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Small devices (landscape phones, 576px and up) */
+@media (max-width: 360px) {
+  .product-grid,
+  .loading {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .product-image {
+    height: 130px;
+  }
+  
+  .product-info h3 {
+    font-size: 0.9rem;
+  }
+  
+  .price {
+    font-size: 1rem;
   }
 }
 </style>
