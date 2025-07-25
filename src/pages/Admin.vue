@@ -450,16 +450,24 @@ const sendMessage = async () => {
 
   messages.value.push({ role: "user", content: userInput.value })
 
-  const res = await fetch("https://aichatapi-three.vercel.app/api/chat", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ messages: messages.value })
-  })
+  try {
+    const res = await fetch("https://aichatapi-three.vercel.app/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ messages: messages.value })
+    })
 
-  const data = await res.json()
-  messages.value.push({ role: "assistant", content: data.message?.content || "Sin respuesta." })
+    if (!res.ok) throw new Error("Error en la API")
+
+    const data = await res.json()
+    messages.value.push({ role: "assistant", content: data.message?.content || "Sin respuesta." })
+  } catch (err) {
+    console.error("ERROR en sendMessage:", err)
+    messages.value.push({ role: "assistant", content: "Ocurrió un error al responder." })
+  }
+
   userInput.value = ""
 }
 
