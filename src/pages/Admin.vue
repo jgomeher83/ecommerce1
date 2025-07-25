@@ -451,7 +451,7 @@ const sendMessage = async () => {
   messages.value.push({ role: "user", content: userInput.value });
 
   try {
-    const res = await fetch("https://aichatapi-three.vercel.app/api/chat", {
+    const res = await fetch("https://backendpython1.onrender.com/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -463,8 +463,8 @@ const sendMessage = async () => {
 
     const data = await res.json();
 
-    // ✅ Usar el contenido devuelto por Groq (OpenAI compatible)
-    const reply = data?.choices?.[0]?.message?.content || "Sin respuesta del modelo.";
+    // ✅ Extraer la respuesta del modelo desde backend Flask
+    const reply = data?.reply || "Sin respuesta del modelo.";
     messages.value.push({ role: "assistant", content: reply });
 
   } catch (err) {
@@ -474,6 +474,7 @@ const sendMessage = async () => {
 
   userInput.value = "";
 };
+
 
 
 </script>
