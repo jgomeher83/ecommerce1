@@ -212,6 +212,25 @@
           </div>
         </div>
       </div>
+      <button @click="showChat = true" class="chat-button">
+  💬 Chat Soporte
+</button>
+<div v-if="showChat" class="chat-popup">
+  <div class="chat-header">
+    <h4>Asistente Virtual</h4>
+    <button @click="showChat = false">✖</button>
+  </div>
+  <div class="chat-body">
+    <div v-for="(msg, idx) in messages" :key="idx" :class="msg.role">
+      <p>{{ msg.content }}</p>
+    </div>
+  </div>
+  <form @submit.prevent="sendMessage" class="chat-input">
+    <input v-model="userInput" placeholder="Escribe tu mensaje..." />
+    <button type="submit">Enviar</button>
+  </form>
+</div>
+
     </div>
   </div>
 
@@ -420,10 +439,103 @@ async function updateItemRecipients(userId,orderId, itemIdx, recipients) {
 }
 
 
+const showChat = ref(false)
+const userInput = ref("")
+const messages = ref([
+  { role: "system", content: "You are a helpful assistant." }
+])
+
+const sendMessage = async () => {
+  if (!userInput.value.trim()) return
+
+  messages.value.push({ role: "user", content: userInput.value })
+
+  const res = await fetch("https://aichatapi-three.vercel.app/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ messages: messages.value })
+  })
+
+  const data = await res.json()
+  messages.value.push({ role: "assistant", content: data.message?.content || "Sin respuesta." })
+  userInput.value = ""
+}
 
 </script>
 
 <style scoped>
+.chat-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 50px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.chat-popup {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 300px;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  max-height: 500px;
+  overflow: hidden;
+}
+
+.chat-header {
+  background: #4caf50;
+  color: white;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.chat-body {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.chat-body .user {
+  text-align: right;
+  color: #333;
+}
+
+.chat-body .assistant {
+  text-align: left;
+  color: #4caf50;
+}
+
+.chat-input {
+  display: flex;
+  border-top: 1px solid #ccc;
+}
+
+.chat-input input {
+  flex: 1;
+  padding: 10px;
+  border: none;
+}
+
+.chat-input button {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+}
+
 .recipients-list {
   margin-top: 1rem;
   padding: 1rem;
