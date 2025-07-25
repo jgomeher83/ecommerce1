@@ -300,6 +300,7 @@ const router = useRouter()
 
 // Datos del usuario
 const user = computed(() => store.user)
+// console.log(user.value)
 const isAdmin = computed(() => store.user?.isAdmin || false)
 
 // Pestañas del perfil
@@ -310,9 +311,9 @@ const tabs = computed(() => {
     { id: 'settings', label: 'Configuración' }
   ]
   
-  if (isAdmin.value) {
-    baseTabs.splice(1, 0, { id: 'admin', label: 'Administración' })
-  }
+  // if (isAdmin.value) {
+  //   baseTabs.splice(1, 0, { id: 'admin', label: 'Administración' })
+  // }
   
   return baseTabs
 })
@@ -415,6 +416,8 @@ const confirmDeleteAccount = () => {
 const logout = async () => {
   try {
     await logoutUser()
+    store.clearCart() // <-- esta línea
+    console.log('Carrito limpiado')
     store.user = null
     router.push('/login')
   } catch (error) {

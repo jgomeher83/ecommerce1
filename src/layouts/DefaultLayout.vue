@@ -19,11 +19,12 @@
         <nav class="nav" :class="{ 'mobile-open': isMobileMenuOpen }" @click="closeMobileMenu">
           <router-link to="/" class="nav-link" @click="closeMobileMenu">Inicio</router-link>
           <router-link to="/products" class="nav-link" @click="closeMobileMenu">Destinos</router-link>
-          <router-link to="/myprofile" class="nav-link" @click="closeMobileMenu">Mi Perfil</router-link>
           <router-link to="/cart" class="nav-link" @click="closeMobileMenu">
-            Mis compras
+            Carrito
             <span v-if="cartCount > 0" class="cart-count">{{ cartCount }}</span>
           </router-link>
+          <router-link to="/myprofile" class="nav-link" @click="closeMobileMenu">Mi Perfil</router-link>
+          <router-link v-if="user && user.isAdmin" to="/admin" class="nav-link" @click="closeMobileMenu">Admin</router-link>
           <router-link v-if="!user" to="/login" class="nav-link" @click="closeMobileMenu">Iniciar sesión</router-link>
           <a v-else href="#" @click.prevent="logout" class="nav-link">Cerrar sesión</a>
         </nav>
@@ -76,11 +77,11 @@ const closeMobileMenu = () => {
 const logout = async () => {
   try {
     await logoutUser()
+    store.clearCart() // <-- esta línea
     store.user = null
     router.push('/login')
-    closeMobileMenu()
   } catch (error) {
-    console.error('Error logging out:', error)
+    console.error('Error al cerrar sesión:', error)
   }
 }
 

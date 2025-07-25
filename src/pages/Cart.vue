@@ -2,10 +2,12 @@
   <div class="cart-page">
     <div class="container">
       <h1>Tu Carrito de Compras</h1>
-      
+
       <div v-if="cartItems.length === 0" class="empty-cart">
         <div class="empty-cart-content">
-          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="empty-cart-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            class="empty-cart-icon">
             <circle cx="9" cy="21" r="1"></circle>
             <circle cx="20" cy="21" r="1"></circle>
             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
@@ -23,7 +25,7 @@
           <div class="cart-item" v-for="item in cartItems" :key="item.id">
             <div class="item-image">
               <router-link :to="`/products/${item.id}`">
-       
+
                 <img :src="item.image" :alt="item.name" @error="handleImageError">
               </router-link>
             </div>
@@ -34,70 +36,88 @@
                     {{ item.name }}
                   </router-link>
                 </h3>
-                <button @click="removeItem(item.id)" class="remove-item" aria-label="Eliminar producto">
-                  &times;
-                </button>
+
               </div>
               <p class="item-category">{{ formatCategory(item.category) }}</p>
-              
+
               <div class="item-price">
                 ${{ formatPrice(item.price) }}
                 <span v-if="item.originalPrice" class="original-price">
                   ${{ formatPrice(item.originalPrice) }}
                 </span>
               </div>
-              
+
               <div class="item-quantity">
-                <button 
-                  @click="updateQuantity(item.id, item.quantity - 1)" 
-                  :disabled="item.quantity <= 1"
-                  class="quantity-btn"
-                >
+                <!-- <button @click="updateQuantity(item.id, item.quantity - 1)" :disabled="item.quantity <= 1"
+                  class="quantity-btn">
                   −
-                </button>
-                <span class="quantity">{{ item.quantity }}</span>
-                <button 
-                  @click="updateQuantity(item.id, item.quantity + 1)" 
-                  class="quantity-btn"
-                >
+                </button> -->
+                <span class="quantity">
+                  {{ item.recipients && item.recipients.length > 1 ? item.recipients.length : 1 }}
+                </span>
+                <button @click="addRecipient(item)" class="quantity-btn">
                   +
                 </button>
               </div>
             </div>
+
+            <div class="recipient-form">
+              <h4 v-if="item.recipients && item.recipients.length > 1">Destinatarios</h4>
+
+              <div v-for="(recipient, rIndex) in item.recipients" :key="rIndex" class="recipient-entry">
+                <label>
+                  Nombre {{ rIndex + 1 }}
+                  <input v-model="recipient.name" type="text" placeholder="Nombre" />
+                </label>
+                <label>
+                  Cédula {{ rIndex + 1 }}
+                  <input v-model="recipient.id" type="text" placeholder="cc" />
+                </label>
+                <button class="remove-recipient-btn" @click="removeRecipient(item, rIndex)">×</button>
+              </div>
+
+              <!-- <button class="add-recipient-btn" @click="addRecipient(item)">Agregar destinatario</button> -->
+            </div>
+
+
+
+            <button @click="removeItem(item.id)" class="remove-item" aria-label="Eliminar producto">
+              X
+            </button>
+
+
           </div>
         </div>
 
         <div class="order-summary">
           <h2>Resumen del pedido</h2>
-          
+
           <div class="summary-row">
-            <span>Subtotal ({{ totalItems }} {{ totalItems === 1 ? 'producto' : 'productos' }})</span>
+            <span>
+              Subtotal ({{ totalRecipientes }} {{ totalRecipientes === 1 ? 'producto' : 'productos' }})
+            </span>
             <span>${{ formatPrice(subtotal) }}</span>
           </div>
-          
+
           <div class="summary-row">
             <span>Envío</span>
-            <span>{{ shippingCost === 0 ? 'Gratis' : `$${formatPrice(shippingCost)}` }}</span>
+            <span>{{ shippingCost === 0 ? 'Por procesar' : `$${formatPrice(shippingCost)}` }}</span>
           </div>
-          
-          <div v-if="discount > 0" class="summary-row discount">
+
+          <!-- <div v-if="discount > 0" class="summary-row discount">
             <span>Descuento</span>
             <span>-${{ formatPrice(discount) }}</span>
-          </div>
-          
+          </div> -->
+
           <div class="summary-row total">
             <span>Total</span>
             <span>${{ formatPrice(total) }}</span>
           </div>
-          
-          <button 
-            @click="proceedToCheckout" 
-            class="checkout-btn"
-            :disabled="isProcessing"
-          >
+
+          <button @click="proceedToCheckout" class="checkout-btn" :disabled="isProcessing">
             {{ isProcessing ? 'Procesando...' : 'Proceder al pago' }}
           </button>
-          
+
           <div class="payment-methods">
             <p>Métodos de pago aceptados:</p>
             <div class="payment-icons">
@@ -116,17 +136,23 @@
 import { ref, computed, onMounted } from 'vue'
 import { useStore } from '@/store'
 import { useRouter } from 'vue-router'
+import { db } from '@/services/firebase'  // Updated import path
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 
 const store = useStore()
 const router = useRouter()
 const isProcessing = ref(false)
+const errorMessage = ref('')
 
 // Obtener items del carrito del store
 const cartItems = computed(() => store.cart)
 
 // Calcular totales
 const subtotal = computed(() => {
-  return cartItems.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  return cartItems.value.reduce((sum, item) => {
+    const qty = item.recipients?.length && item.recipients.length > 0 ? item.recipients.length : 1
+    return sum + (item.price * qty)
+  }, 0)
 })
 
 const totalItems = computed(() => {
@@ -156,7 +182,27 @@ const formatPrice = (price) => {
   });
 }
 
+const addRecipient = (item) => {
+  if (!item.recipients) item.recipients = []
+  item.recipients.push({ name: '', cc: '' })
+}
+
+const removeRecipient = (item, index) => {
+  if (item.recipients && item.recipients.length > index) {
+    item.recipients.splice(index, 1)
+  }
+}
+
 // Métodos
+const totalRecipientes = computed(() =>
+  cartItems.value.reduce((acc, item) => {
+    if (!item.recipients || item.recipients.length === 0) {
+      return acc + 1
+    }
+    return acc + item.recipients.length
+  }, 0)
+)
+
 const updateQuantity = (productId, newQuantity) => {
   if (newQuantity < 1) return
   store.updateQuantity(productId, newQuantity)
@@ -167,13 +213,49 @@ const removeItem = (productId) => {
 }
 
 const proceedToCheckout = async () => {
+  if (cartItems.value.length === 0) return
+
   isProcessing.value = true
+  errorMessage.value = ''
+
   try {
-    // Aquí iría la lógica para procesar el pago
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    router.push('/checkout')
+    // Preparar datos de la orden
+    const orderData = {
+    items: cartItems.value.map(item => {
+      const recipients = item.recipients || [];
+      return {
+        id: item.id,
+        name: item.name,
+        image: item.image,
+        price: item.price,
+        quantity: recipients.length > 0 ? recipients.length : 1,
+        category: item.category,
+        recipients: recipients
+      }
+    }),
+      subtotal: subtotal.value,
+      shipping: shippingCost.value,
+      discount: discount.value,
+      total: total.value,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      userId: store.user?.uid || 'anonymous',
+      userEmail: store.user?.email || 'guest'
+    }
+
+    // Guardar en Firestore
+    const ordersRef = collection(db, `users/${store.user?.uid}/orders`)
+    const docRef = await addDoc(ordersRef, orderData)
+
+    // Limpiar carrito después de guardar la orden
+    store.clearCart()
+
+    // Redirigir a la página de confirmación
+    router.push(`/order-confirmation/${docRef.id}`)
+
   } catch (error) {
     console.error('Error al procesar el pago:', error)
+    errorMessage.value = 'Ocurrió un error al procesar tu pedido. Por favor, inténtalo de nuevo.'
   } finally {
     isProcessing.value = false
   }
@@ -187,7 +269,18 @@ const formatCategory = (category) => {
 const handleImageError = (event) => {
   event.target.src = 'https://placehold.co/300x300/png?text=Imagen+no+disponible'
 }
+
+onMounted(() => {
+  cartItems.value.forEach(item => {
+    if (!item.recipients) {
+      item.recipients = [
+        { name: '', id: '' }
+      ]
+    }
+  })
+})
 </script>
+
 
 <style scoped>
 .cart-page {
@@ -253,7 +346,7 @@ h1 {
   background-color: #3d8b40;
 }
 
-/* Contenedor del carrito */
+/* Carrito lleno */
 .cart-container {
   display: grid;
   grid-template-columns: 1fr 350px;
@@ -261,7 +354,6 @@ h1 {
   margin-top: 2rem;
 }
 
-/* Lista de productos */
 .cart-items {
   display: flex;
   flex-direction: column;
@@ -275,6 +367,8 @@ h1 {
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+  flex-wrap: wrap;
 }
 
 .item-image {
@@ -292,7 +386,7 @@ h1 {
 }
 
 .item-details {
-  flex-grow: 1;
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
@@ -316,18 +410,19 @@ h1 {
 }
 
 .product-title-link:hover {
-  color: #4f46e5; /* Or your primary color */
+  color: #4f46e5;
   text-decoration: underline;
 }
 
 .remove-item {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
   background: none;
   border: none;
   font-size: 1.5rem;
   color: #a0aec0;
   cursor: pointer;
-  padding: 0 0.5rem;
-  line-height: 1;
   transition: color 0.2s;
 }
 
@@ -338,14 +433,13 @@ h1 {
 .item-category {
   font-size: 0.85rem;
   color: #718096;
-  margin: 0 0 0.75rem 0;
+  margin-bottom: 0.75rem;
 }
 
 .item-price {
   font-size: 1.25rem;
   font-weight: 700;
   color: #2d3748;
-  margin: 0.5rem 0;
 }
 
 .original-price {
@@ -360,6 +454,7 @@ h1 {
   display: flex;
   align-items: center;
   margin-top: auto;
+  gap: 0.5rem;
 }
 
 .quantity-btn {
@@ -381,7 +476,7 @@ h1 {
   cursor: not-allowed;
 }
 
-.quantity-btn:not(:disabled):hover {
+.quantity-btn:hover:not(:disabled) {
   background: #edf2f7;
   border-color: #cbd5e0;
 }
@@ -391,6 +486,121 @@ h1 {
   text-align: center;
   font-size: 1rem;
   font-weight: 500;
+}
+
+/* Formularios de destinatarios */
+/* Formularios de destinatarios */
+.recipient-form {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: visible;
+  overflow-y: visible;
+  display: block;
+}
+
+/* Para asegurarse de que los formularios no se oculten */
+body,
+html {
+  overflow-x: hidden;
+}
+
+.recipient-entry {
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* .recipient-form {
+  border: 2px dashed red !important;
+  min-height: 200px;
+} */
+
+
+
+.recipient-form h4 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: #2d3748;
+}
+
+.recipient-entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  background: #fff;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.recipient-entry label {
+  flex: 1 1 100%;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+}
+
+.recipient-entry input {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+/* Botón de eliminar (X) */
+.remove-recipient-btn {
+  background-color: #ff4d4f;
+  border: none;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 28px;
+  cursor: pointer;
+  align-self: center;
+  transition: background-color 0.2s;
+}
+
+.remove-recipient-btn:hover {
+  background-color: #e74c3c;
+}
+
+/* Botón agregar más destinatarios */
+.add-recipient-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+.add-recipient-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Responsive (mejoras específicas en pantallas pequeñas) */
+@media (max-width: 600px) {
+  .recipient-entry {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .remove-recipient-btn {
+    align-self: flex-end;
+    margin-top: 0.5rem;
+  }
+
+  .add-recipient-btn {
+    width: 100%;
+  }
 }
 
 /* Resumen del pedido */
@@ -406,8 +616,7 @@ h1 {
 
 .order-summary h2 {
   font-size: 1.25rem;
-  margin: 0 0 1.5rem 0;
-  text-align: left;
+  margin-bottom: 1.5rem;
   color: #2d3748;
 }
 
@@ -421,8 +630,6 @@ h1 {
 
 .summary-row:last-child {
   border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
 }
 
 .summary-row.total {
@@ -485,7 +692,7 @@ h1 {
   opacity: 0.7;
 }
 
-/* Responsive */
+/* Responsivo */
 @media (max-width: 1024px) {
   .cart-container {
     grid-template-columns: 1fr 300px;
@@ -496,29 +703,31 @@ h1 {
   .cart-container {
     grid-template-columns: 1fr;
   }
-  
+
   .order-summary {
     position: static;
     margin-top: 2rem;
   }
+
+  .cart-item {
+    flex-direction: column;
+  }
+
+  .item-image {
+    width: 100%;
+    height: auto;
+  }
 }
 
 @media (max-width: 576px) {
-  .cart-item {
+  .recipient-entry {
     flex-direction: column;
+  }
+
+  .cart-item {
     padding: 1rem;
   }
-  
-  .item-image {
-    width: 100%;
-    height: 200px;
-    margin-bottom: 1rem;
-  }
-  
-  .item-quantity {
-    margin-top: 1rem;
-  }
-  
+
   .btn-primary,
   .checkout-btn {
     padding: 0.75rem 1rem;

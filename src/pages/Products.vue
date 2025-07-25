@@ -25,7 +25,7 @@
           </div>
 
 
-          <div class="filter-section">
+          <!-- <div class="filter-section">
             <h3>Rango de precios</h3>
             <div class="price-range">
               <input 
@@ -41,10 +41,10 @@
                 <span>Hasta ${{ priceRange[1] }}</span>
               </div>
             </div>
-          </div>
+          </div> -->
 
 
-          <div class="filter-section">
+          <!-- <div class="filter-section">
             <h3>Calificación</h3>
             <div class="filter-options">
               <label v-for="rating in [4, 3, 2, 1]" :key="rating" class="filter-option">
@@ -61,7 +61,7 @@
                 <span class="text-sm text-gray-500 ml-1">y más</span>
               </label>
             </div>
-          </div>
+          </div> -->
 
 
           <button 
