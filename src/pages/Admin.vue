@@ -446,9 +446,9 @@ const messages = ref([
 ])
 
 const sendMessage = async () => {
-  if (!userInput.value.trim()) return
+  if (!userInput.value.trim()) return;
 
-  messages.value.push({ role: "user", content: userInput.value })
+  messages.value.push({ role: "user", content: userInput.value });
 
   try {
     const res = await fetch("https://aichatapi-three.vercel.app/api/chat", {
@@ -457,19 +457,24 @@ const sendMessage = async () => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ messages: messages.value })
-    })
+    });
 
-    if (!res.ok) throw new Error("Error en la API")
+    if (!res.ok) throw new Error("Error en la API");
 
-    const data = await res.json()
-    messages.value.push({ role: "assistant", content: data.message?.content || "Sin respuesta." })
+    const data = await res.json();
+
+    // ✅ Usar el contenido devuelto por Groq (OpenAI compatible)
+    const reply = data?.choices?.[0]?.message?.content || "Sin respuesta del modelo.";
+    messages.value.push({ role: "assistant", content: reply });
+
   } catch (err) {
-    console.error("ERROR en sendMessage:", err)
-    messages.value.push({ role: "assistant", content: "Ocurrió un error al responder." })
+    console.error("ERROR en sendMessage:", err);
+    messages.value.push({ role: "assistant", content: "Ocurrió un error al responder." });
   }
 
-  userInput.value = ""
-}
+  userInput.value = "";
+};
+
 
 </script>
 
