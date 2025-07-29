@@ -100,6 +100,10 @@
             </div>
           </div>
           <div v-else-if="viewMode === 'orders'">
+            <div class="order-summary-box">
+              <h4>📊 Análisis General de Pedidos</h4>
+              <p>{{ orderSummary }}</p>
+            </div>
             <h3>Todos los Pedidos</h3>
             <div class="filters">
               <select v-model="searchEmail">
@@ -196,7 +200,7 @@
                           @click="removeRecipient(order.id, itemIdx, idx)">❌</button> -->
                       </div>
                       <button class="btn btn-success btn-sm"
-                        @click="updateItemRecipients(order.userId,order.id, itemIdx, item.recipients)">
+                        @click="updateItemRecipients(order.userId, order.id, itemIdx, item.recipients)">
                         💾 Guardar destinatarios
                       </button>
                     </div>
@@ -213,23 +217,23 @@
         </div>
       </div>
       <button @click="showChat = true" class="chat-button">
-  💬 Chat Soporte
-</button>
-<div v-if="showChat" class="chat-popup">
-  <div class="chat-header">
-    <h4>Asistente Virtual</h4>
-    <button @click="showChat = false">✖</button>
-  </div>
-  <div class="chat-body">
-    <div v-for="(msg, idx) in messages" :key="idx" :class="msg.role">
-      <p>{{ msg.content }}</p>
-    </div>
-  </div>
-  <form @submit.prevent="sendMessage" class="chat-input">
-    <input v-model="userInput" placeholder="Escribe tu mensaje..." />
-    <button type="submit">Enviar</button>
-  </form>
-</div>
+        💬 Chat Soporte
+      </button>
+      <div v-if="showChat" class="chat-popup">
+        <div class="chat-header">
+          <h4>Asistente Virtual</h4>
+          <button @click="showChat = false">✖</button>
+        </div>
+        <div class="chat-body">
+          <div v-for="(msg, idx) in messages" :key="idx" :class="msg.role">
+            <p>{{ msg.content }}</p>
+          </div>
+        </div>
+        <form @submit.prevent="sendMessage" class="chat-input">
+          <input v-model="userInput" placeholder="Escribe tu mensaje..." />
+          <button type="submit">Enviar</button>
+        </form>
+      </div>
 
     </div>
   </div>
@@ -380,6 +384,7 @@ onMounted(() => {
   if (isAdmin.value) {
     loadProducts()
     loadAllOrders()
+    loadOrderSummary()
   }
 })
 
@@ -402,7 +407,7 @@ async function removeRecipient(orderId, itemIdx, recipientIdx) {
   })
 }
 
-async function updateItemRecipients(userId,orderId, itemIdx, recipients) {
+async function updateItemRecipients(userId, orderId, itemIdx, recipients) {
   try {
     const orderRef = doc(db, 'users', userId, 'orders', orderId)
     const order = allOrders.value.find(o => o.id === orderId)
@@ -456,7 +461,10 @@ const sendMessage = async () => {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ messages: messages.value })
+      body: JSON.stringify({
+        session_id: "default", // o cualquier ID dinámico si quieres memorias separadas
+        input: userInput.value
+      })
     });
 
     if (!res.ok) throw new Error("Error en la API");
@@ -476,10 +484,29 @@ const sendMessage = async () => {
 };
 
 
+const orderSummary = ref("Cargando análisis...")
 
+const loadOrderSummary = async () => {
+  try {
+    const res = await fetch("https://backendpython1.onrender.com/order-summary")
+    const data = await res.json()
+    orderSummary.value = data.summary || "Sin análisis disponible."
+  } catch (e) {
+    console.error("Error al obtener análisis:", e)
+    orderSummary.value = "Error al cargar el análisis."
+  }
+}
 </script>
 
 <style scoped>
+.order-summary-box {
+  background-color: #f0f8ff;
+  padding: 1rem;
+  border-left: 5px solid #007bff;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+}
+
 .chat-button {
   position: fixed;
   bottom: 20px;
@@ -500,7 +527,7 @@ const sendMessage = async () => {
   width: 300px;
   background: white;
   border: 1px solid #ccc;
-  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -529,7 +556,7 @@ const sendMessage = async () => {
 
 .chat-body .assistant {
   text-align: left;
-  color: #4caf50;
+  color: #0e0101;
 }
 
 .chat-input {

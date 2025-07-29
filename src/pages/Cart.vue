@@ -170,7 +170,7 @@ const discount = computed(() => {
 })
 
 const total = computed(() => {
-  return subtotal.value + shippingCost.value - discount.value
+  return subtotal.value + shippingCost.value 
 })
 
 // Price formatting function
