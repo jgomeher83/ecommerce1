@@ -64,7 +64,8 @@
                 <small class="text-muted">Para Google Drive, usa el enlace de compartir</small>
                 <div v-if="newProduct.image" class="mt-2">
                   <p>Vista previa:</p>
-                  <img :src="newProduct.image" :alt="'Imagen de ' + newProduct.name" class="img-preview" />
+                  <img :src="newProduct.image" :alt="'Imagen de ' + newProduct.name" class="img-preview"
+                     />
                 </div>
               </div>
 
@@ -88,9 +89,6 @@
                     <div class="product-actions">
                       <button @click="editProduct(product)" class="btn btn-primary btn-sm">
                         <i class="fas fa-edit"></i> Editar
-                      </button>
-                      <button @click="deleteProduct(product.id)" class="btn btn-danger btn-sm">
-                        <i class="fas fa-trash"></i> Eliminar
                       </button>
                     </div>
                   </div>
@@ -156,9 +154,8 @@
 
 
             <div class="total-base-box">
-              <h4>💰 Total Base de Pedidos: ${{ formatPrice(totalBaseAllOrders) }}</h4>
-            </div>
-            <button @click="refrescar()">Refrescar</button>
+  <h4>💰 Total Base de Pedidos: ${{ formatPrice(totalBaseAllOrders) }}</h4>
+</div>
             <div v-if="filteredOrders.length > 0" class="orders-list">
               <div v-for="order in filteredOrders" :key="order.id" class="order-card">
                 <div class="order-header">
@@ -183,7 +180,7 @@
                   <div v-for="(item, itemIdx) in order.items" :key="item.id" class="order-item">
                     <img :src="item.imagen || 'https://via.placeholder.com/80'" :alt="item.name" class="item-image" />
                     <div class="item-details">
-                      <h5>{{ item.product_name }}</h5>
+                      <h5>{{ item.product_name  }}</h5>
                       <p>Precio unitario: ${{ formatPrice(item.price) }}</p>
                       <p>Cantidad: {{ item.recipients?.length || 1 }}</p>
                       <p>Subtotal: ${{ formatPrice(item.price * (item.recipients?.length || 1)) }}</p>
@@ -197,26 +194,22 @@
                 </button>
 
                 <div v-if="showRecipients[order.id]" class="recipients-list">
-                  <template v-for="(item, itemIdx) in order.items" :key="item.id || itemIdx">
+                  <template v-for="(item, itemIdx) in order.items" :key="item.id">
                     <div v-if="(item.recipients?.length || 0) > 0" class="recipient-block">
-                      <h5>📦 {{ item.name }} ({{ item.recipients.length }} destinatario{{ item.recipients.length > 1 ?
-                        's' : '' }})</h5>
-                      <div v-for="(recipient, idx) in item.recipients"
-                        :key="recipient.id || `${recipient.name}-${recipient.identification}-${idx}`"
-                        class="recipient-entry">
-
+                      <h5>📦 {{ item.name }} ({{ item.recipients.length }} destinatario{{ item.recipients.length > 1 ? 's' : '' }})</h5>
+                      <div v-for="(recipient, idx) in item.recipients" :key="idx" class="recipient-entry">
                         <input v-model="recipient.name" :placeholder="`Nombre ${idx + 1}`" />
                         <input v-model="recipient.identification" :placeholder="`CC ${idx + 1}`" />
-                        <button class="btn btn-danger btn-sm"
+                        <button
+                          class="btn btn-danger btn-sm"
                           @click="handleRecipientDeletion(order.id, itemIdx, recipient, idx)">
                           ❌
                         </button>
                       </div>
-                      <button class="btn btn-success btn-sm" @click="updateFullOrder(order.id)">
+                      <button class="btn btn-success btn-sm" @click="updateItemRecipients(order.userId, order.id, itemIdx, item.recipients)">
                         💾 Guardar destinatarios
                       </button>
-                      <button class="btn btn-success btn-sm" @click="addRecipient(order.id, itemIdx)">➕ Add
-                        Recipient</button>
+                      <button class="btn btn-success btn-sm" @click="addRecipient(order.id, itemIdx)">➕ Add Recipient</button>
                     </div>
                   </template>
                 </div>
@@ -264,9 +257,8 @@ const endDate = ref('')
 const isLoading = ref(true)
 const sortBy = ref('fecha-desc')
 const allOrders = ref([])
-const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
-const API_BASE_URLdev = "http://localhost:5000"
-const VITE_API_URL = "https://backendpython1.onrender.com/chat"
+const API_BASE_URL= "http://localhost:5000"
+const VITE_API_URL= "https://backendpython1.onrender.com/chat"
 const filteredOrders = computed(() => {
   return allOrders.value
     .filter(order => {
@@ -385,20 +377,20 @@ const editProduct = (product) => {
 
 const addProduct = async () => {
   const data = {
-    name: newProduct.value.name,
-    price: parseFloat(newProduct.value.price),
-    stock: parseInt(newProduct.value.stock),
-    category: newProduct.value.category,
-    description: newProduct.value.description,
-    image: newProduct.value.image
-  }
+  name: newProduct.value.name,
+  price: parseFloat(newProduct.value.price),
+  stock: parseInt(newProduct.value.stock),
+  category: newProduct.value.category,
+  description: newProduct.value.description,
+  image: newProduct.value.image
+}
   console.log("✅ Data a enviar:", data)
   try {
     let res
 
     if (isEditing.value) {
       console.log('Updating product', currentProductId.value)
-      res = await fetch(`${API_BASE_URL}/api/products/${currentProductId.value}`, {
+      res = await fetch(`http://localhost:5000/api/products/${currentProductId.value}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -409,7 +401,7 @@ const addProduct = async () => {
       if (!res.ok) throw new Error('Failed to update product')
       alert('✅ Producto actualizado')
     } else {
-      res = await fetch(`${API_BASE_URL}/api/products`, {
+      res = await fetch('http://localhost:5000/api/products', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -449,7 +441,7 @@ const resetForm = () => {
 
 const loadAllOrders = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/orders/with-details`, {
+    const response = await fetch('http://localhost:5000/api/orders/with-details', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -473,7 +465,7 @@ const loadAllOrders = async () => {
 
 
 
-const uniqueEmails = computed(() => [...new Set(allOrders.value.map(o => o.user_name).filter(Boolean))])
+const uniqueEmails = computed(() => [...new Set(allOrders.value.map(o => o.user_name ).filter(Boolean))])
 const uniqueOrderIds = computed(() => [...new Set(allOrders.value.map(o => o.id).filter(Boolean))])
 const uniqueItemNames = computed(() => {
   const allNames = allOrders.value.flatMap(o => o.items?.map(i => i.name) || [])
@@ -497,6 +489,64 @@ function toggleRecipients(orderId) {
   showRecipients[orderId] = !showRecipients[orderId]
 }
 
+async function removeRecipient(orderId, itemIdx, recipientIdx) {
+  const order = allOrders.value.find(o => o.id === orderId)
+  if (!order || !order.items[itemIdx]) return
+
+  const updatedRecipients = [...(order.items[itemIdx].recipients || [])]
+  updatedRecipients.splice(recipientIdx, 1)
+
+  await updateItemRecipients(order.userId, orderId, itemIdx, updatedRecipients)
+}
+
+
+async function updateItemRecipients(userId, orderId, itemIdx, recipients) {
+  try {
+    const order = allOrders.value.find(o => o.id === orderId)
+    if (!order || !order.items[itemIdx]) return
+
+    // 🧠 Deduplicar por nombre + cédula
+    const seen = new Set()
+    const deduped = []
+    for (const r of recipients) {
+      const name = (r.name || "").trim()
+      const id = (r.identification || "").trim()
+      if (!name || !id) continue
+      const key = `${name}|${id}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        deduped.push({ name, id })
+      }
+    }
+
+    const payload = {
+      itemIndex: itemIdx,
+      recipients: deduped
+    }
+
+    const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/recipients`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    const result = await res.json()
+
+    if (!res.ok) throw new Error(result.error || 'Error saving recipients')
+
+    alert('✅ Recipients saved successfully.')
+
+    // Reemplazar por los nuevos que ya vienen con ID
+    if (result.recipients) {
+      order.items[itemIdx].recipients = result.recipients
+    }
+
+  } catch (error) {
+    console.error('❌ Error saving recipients:', error)
+    alert('Failed to save recipients.')
+  }
+}
+
 
 
 
@@ -512,7 +562,7 @@ const sendMessage = async () => {
   messages.value.push({ role: "user", content: userInput.value });
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/chat`, {
+    const res = await fetch(`${API_BASE_URL}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -539,31 +589,13 @@ const sendMessage = async () => {
   userInput.value = "";
 };
 
-const refrescar = async () => {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/refresh_orders`, {
-      method: 'GET',
-    })
-    const data = await res.json()
-    console.log(data) 
-    orderSummary.value = data.summary || "Sin análisis disponible."
-  } catch (e) {
-    console.error("Error al obtener análisis:", e)
-    orderSummary.value = "Error al cargar el análisis."
-  }
-}
-
-
 
 const orderSummary = ref("Cargando análisis...")
 
 const loadOrderSummary = async () => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/refresh_orders`, {
-      method: 'GET',
-    })
+    const res = await fetch("https://backendpython1.onrender.com/order-summary")
     const data = await res.json()
-    console.log(data) 
     orderSummary.value = data.summary || "Sin análisis disponible."
   } catch (e) {
     console.error("Error al obtener análisis:", e)
@@ -647,7 +679,6 @@ function addRecipient(orderId, itemIndex) {
   }
 
   order.items[itemIndex].recipients.push({
-    id: uuid(),
     name: '',
     identification: ''
   })
@@ -668,72 +699,13 @@ function handleRecipientDeletion(orderId, itemIdx, recipient, recipientIdx) {
     order.items[itemIdx].recipients.splice(recipientIdx, 1)
   }
 }
-function uuid() {
-  return '_' + Math.random().toString(36).substr(2, 9)
-}
-async function updateFullOrder(orderId) {
-  const order = allOrders.value.find(o => o.id === orderId)
-  if (!order) return
-
-  // ✅ Limpiar recipients vacíos o repetidos
-  const cleanItems = order.items.map(item => {
-    const recipients = (item.recipients || []).filter(r => r.name && r.identification)
-
-    const seen = new Set()
-    const deduped = recipients.filter(r => {
-      const key = `${r.name.trim().toLowerCase()}|${r.identification.trim()}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-
-    return {
-      product_id: item.product_id,
-      price: item.price,
-      imagen: item.imagen,
-      recipients: deduped
-    }
-  })
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/full`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cleanItems, status: order.status })
-    })
-
-    const result = await res.json()
-    if (!res.ok) throw new Error(result.error || 'Falló la actualización')
-
-    alert("✅ Orden actualizada completamente")
-    await loadAllOrders()  // refresca todo
-  } catch (err) {
-    console.error("❌ Error actualizando orden completa:", err)
-    alert("Error al guardar cambios")
-  }
-}
-async function deleteProduct(productId) {
-  if (!confirm("¿Estás seguro de eliminar este producto?")) return;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
-      method: 'DELETE'
-    });
-
-    if (!res.ok) throw new Error("❌ Falló la eliminación");
-
-    alert("✅ Producto eliminado");
-    await loadProducts(); // recarga la lista
-  } catch (err) {
-    console.error("❌ Error al eliminar producto:", err);
-    alert("Error al eliminar producto");
-  }
-}
 
 
 </script>
 
 <style scoped>
+
+
 .total-base-box {
   background: #f3f3f3;
   border: 1px solid #ddd;
@@ -742,7 +714,6 @@ async function deleteProduct(productId) {
   border-radius: 8px;
   font-weight: bold;
 }
-
 .order-summary-box {
   background-color: #f0f8ff;
   padding: 1rem;

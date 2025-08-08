@@ -89,6 +89,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '@/store'
 import { registerUser, loginUser } from '@/services/firebase'
+import { syncUserWithBackend } from '@/services/backend'
+
 
 const router = useRouter()
 const store = useStore()
@@ -121,7 +123,9 @@ const handleSubmit = async () => {
     if (isLogin.value) {
       // Iniciar sesión
       const userCredential = await loginUser(formData.value.email, formData.value.password)
+      await syncUserWithBackend(userCredential.user)
       store.user = userCredential.user
+      
       router.push('/')
     } else {
       // Registrarse
@@ -131,6 +135,7 @@ const handleSubmit = async () => {
       }
       const userCredential = await registerUser(formData.value.email, formData.value.password, additionalData)
       store.user = userCredential.user
+      await syncUserWithBackend(userCredential.user)
       router.push('/')
     }
   } catch (err) {

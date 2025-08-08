@@ -14,19 +14,19 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
+      host: 'localhost',
       port: 1037,
       open: true,
       strictPort: true,
-      // Only add proxy in development
-      proxy: process.env.NODE_ENV === 'development' ? {
-        // Handle API routes if you have any
-        // '/api': {
-        //   target: 'http://your-api-url',
-        //   changeOrigin: true,
-        //   rewrite: (path) => path.replace(/^\/api/, '')
-        // }
-      } : undefined
+      proxy: {
+        '/api': {
+          target: 'http://localhost:5000',
+          changeOrigin: true,
+          rewrite: path => path.replace(/^\/api/, '')
+        }
+      }
     },
+    
     // This is important for client-side routing in production
     build: {
       outDir: 'dist',

@@ -93,3 +93,6 @@ export const getCurrentUser = () => {
 }
 
 export { auth, db }
+
+
+

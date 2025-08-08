@@ -136,8 +136,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useStore } from '@/store'
 import { useRouter } from 'vue-router'
-import { db } from '@/services/firebase'  // Updated import path
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
+
+
 
 const store = useStore()
 const router = useRouter()
@@ -184,7 +184,8 @@ const formatPrice = (price) => {
 
 const addRecipient = (item) => {
   if (!item.recipients) item.recipients = []
-  item.recipients.push({ name: '', cc: '' })
+    item.recipients.push({ name: '', identification: '' })
+
 }
 
 const removeRecipient = (item, index) => {
@@ -212,54 +213,58 @@ const removeItem = (productId) => {
   store.removeFromCart(productId)
 }
 
+const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
+const API_BASE_URLdev = "http://localhost:5000"
+console.log(cartItems.value)
 const proceedToCheckout = async () => {
   if (cartItems.value.length === 0) return
 
   isProcessing.value = true
   errorMessage.value = ''
+  console.log('🛒 Iniciando checkout...')
 
   try {
-    // Preparar datos de la orden
+    
     const orderData = {
-    items: cartItems.value.map(item => {
-      const recipients = item.recipients || [];
-      return {
-        id: item.id,
-        name: item.name,
-        image: item.image,
-        price: item.price,
-        quantity: recipients.length > 0 ? recipients.length : 1,
-        category: item.category,
-        recipients: recipients
-      }
-    }),
-      subtotal: subtotal.value,
-      shipping: shippingCost.value,
-      discount: discount.value,
-      total: total.value,
-      status: 'pending',
-      createdAt: serverTimestamp(),
-      userId: store.user?.uid || 'anonymous',
-      userEmail: store.user?.email || 'guest'
+      user_id: store.user?.uid || 'anonymous',
+      
+      products: cartItems.value.map(item => ({
+        product_id: item.id,
+        qty: item.recipients?.length > 0 ? item.recipients.length : 1,
+        recipients: item.recipients || [],
+      
+      }))
     }
 
-    // Guardar en Firestore
-    const ordersRef = collection(db, `users/${store.user?.uid}/orders`)
-    const docRef = await addDoc(ordersRef, orderData)
+    console.log('📤 Enviando pedido al backend...')
 
-    // Limpiar carrito después de guardar la orden
+    const response = await fetch(`${API_BASE_URL}/api/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`❌ Error ${response.status}: ${errorText}`)
+    }
+
+    const result = await response.json()
+    console.log('✅ Pedido enviado correctamente:', result)
+
     store.clearCart()
-
-    // Redirigir a la página de confirmación
-    router.push(`/order-confirmation/${docRef.id}`)
+    router.push(`/order-confirmation/${result.order_id}`)
 
   } catch (error) {
-    console.error('Error al procesar el pago:', error)
+    console.error('❌ Error al procesar el pago:', error)
     errorMessage.value = 'Ocurrió un error al procesar tu pedido. Por favor, inténtalo de nuevo.'
   } finally {
     isProcessing.value = false
   }
 }
+
+
+
 
 const formatCategory = (category) => {
   if (!category) return ''

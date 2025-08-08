@@ -199,7 +199,8 @@ import { db } from '@/services/firebase'
 const store = useStore()
 const products = ref([])
 const isLoading = ref(true)
-
+const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
+const API_BASE_URLdev = "http://localhost:5000"
 // Filtros
 const selectedCategories = ref([])
 const priceRange = ref([0, 2000])
@@ -215,41 +216,44 @@ const itemsPerPage = 12
 const fetchProducts = async () => {
   try {
     isLoading.value = true
-    const productsCollection = collection(db, 'products')
-    let q = productsCollection
-    
-    // Apply sorting
+
+    let url = `${API_BASE_URL}/api/products`
+
+    // Add sorting query params if needed
     if (sortBy.value === 'price-asc') {
-      q = query(productsCollection, orderBy('price', 'asc'))
+      url += '?sort=price_asc'
     } else if (sortBy.value === 'price-desc') {
-      q = query(productsCollection, orderBy('price', 'desc'))
+      url += '?sort=price_desc'
     } else if (sortBy.value === 'newest') {
-      q = query(productsCollection, orderBy('createdAt', 'desc'))
+      url += '?sort=newest'
     }
-    
-    const querySnapshot = await getDocs(q)
-    products.value = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      // Ensure all required fields have default values
-      rating: doc.data().rating || 0,
-      originalPrice: doc.data().originalPrice || null,
-      discount: doc.data().discount || 0
+
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Failed to fetch products')
+
+    const data = await res.json()
+
+    products.value = data.map(p => ({
+      ...p,
+      rating: p.rating || 0,
+      originalPrice: p.originalPrice || null,
+      discount: p.discount || 0
     }))
-    
-    // Update price range based on actual products
+
     if (products.value.length > 0) {
       const prices = products.value.map(p => p.price)
       const maxPrice = Math.max(...prices)
-      priceRange.value = [0, Math.ceil(maxPrice / 100) * 100] // Round up to nearest 100
+      priceRange.value = [0, Math.ceil(maxPrice / 100) * 100]
     }
-    
+
   } catch (error) {
-    console.error('Error fetching products:', error)
+    console.error('❌ Error fetching products:', error)
+    alert('Failed to fetch products')
   } finally {
     isLoading.value = false
   }
 }
+
 
 // Computed properties for filtering and sorting
 const filteredProducts = computed(() => {
@@ -333,10 +337,6 @@ const resetFilters = async () => {
   await fetchProducts() // Recargar productos después de reiniciar filtros
 }
 
-// Watch for sortBy changes
-watch(sortBy, () => {
-  fetchProducts()
-})
 
 // Formatear categorías para mostrar
 const formatCategory = (category) => {

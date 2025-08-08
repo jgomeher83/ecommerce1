@@ -66,6 +66,9 @@ import { useStore } from '@/store'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 
+const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
+const API_BASE_URLdev = "http://localhost:5000"
+
 const route = useRoute()
 const store = useStore()
 
@@ -87,23 +90,25 @@ const formatPrice = (price) => {
 const fetchProduct = async () => {
   try {
     loading.value = true
-    const productDoc = await getDoc(doc(db, 'products', productId))
-    
-    if (productDoc.exists()) {
-      product.value = {
-        id: productDoc.id,
-        ...productDoc.data()
-      }
-    } else {
-      product.value = null
+    const res = await fetch(`${API_BASE_URL}/api/products/${productId}`)
+    if (!res.ok) throw new Error('Producto no encontrado')
+
+    const data = await res.json()
+    product.value = {
+      ...data,
+      rating: data.rating || 0,
+      discount: data.discount || 0,
+      originalPrice: data.originalPrice || null
     }
+
   } catch (error) {
-    console.error('Error fetching product:', error)
+    console.error('❌ Error al cargar producto:', error)
     product.value = null
   } finally {
     loading.value = false
   }
 }
+
 
 // Set document title based on product
 const updatePageTitle = () => {

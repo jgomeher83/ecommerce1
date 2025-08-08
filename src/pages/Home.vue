@@ -40,13 +40,15 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useStore } from '@/store'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+
 
 const store = useStore()
 const isLoading = ref(true)
 const products = ref([])
-
+const priceRange = ref([0, 2000])
+const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
+const API_BASE_URLdev = "http://localhost:5000"
+const sortBy = ref('fecha-desc')
 // Price formatting function
 const formatPrice = (price) => {
   const number = Number(price);
@@ -59,15 +61,40 @@ const formatPrice = (price) => {
 // Fetch products from Firestore
 const fetchProducts = async () => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'products'))
-    products.value = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    isLoading.value = true
+
+    let url = `${API_BASE_URL}/api/products`
+
+    // Add sorting query params if needed
+    if (sortBy.value === 'price-asc') {
+      url += '?sort=price_asc'
+    } else if (sortBy.value === 'price-desc') {
+      url += '?sort=price_desc'
+    } else if (sortBy.value === 'newest') {
+      url += '?sort=newest'
+    }
+
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Failed to fetch products')
+
+    const data = await res.json()
+
+    products.value = data.map(p => ({
+      ...p,
+      rating: p.rating || 0,
+      originalPrice: p.originalPrice || null,
+      discount: p.discount || 0
     }))
-    // Store products in the store for later use
-    store.products = products.value
+
+    if (products.value.length > 0) {
+      const prices = products.value.map(p => p.price)
+      const maxPrice = Math.max(...prices)
+      priceRange.value = [0, Math.ceil(maxPrice / 100) * 100]
+    }
+
   } catch (error) {
-    console.error('Error fetching products:', error)
+    console.error('❌ Error fetching products:', error)
+    alert('Failed to fetch products')
   } finally {
     isLoading.value = false
   }

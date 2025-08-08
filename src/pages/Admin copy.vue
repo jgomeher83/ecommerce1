@@ -64,7 +64,8 @@
                 <small class="text-muted">Para Google Drive, usa el enlace de compartir</small>
                 <div v-if="newProduct.image" class="mt-2">
                   <p>Vista previa:</p>
-                  <img :src="newProduct.image" :alt="'Imagen de ' + newProduct.name" class="img-preview" />
+                  <img :src="newProduct.image" :alt="'Imagen de ' + newProduct.name" class="img-preview"
+                    @error="handleImageError" />
                 </div>
               </div>
 
@@ -79,7 +80,7 @@
             <div class="products-list" v-if="products.length > 0">
               <div class="product-grid">
                 <div v-for="product in products" :key="product.id" class="product-card">
-                  <img :src="product.image" :alt="product.name" class="product-image" />
+                  <img :src="convertDriveUrl(product.image)" :alt="product.name" class="product-image" />
                   <div class="product-details">
                     <h5>{{ product.name }}</h5>
                     <p class="product-price">${{ formatPrice(product.price) }}</p>
@@ -88,9 +89,6 @@
                     <div class="product-actions">
                       <button @click="editProduct(product)" class="btn btn-primary btn-sm">
                         <i class="fas fa-edit"></i> Editar
-                      </button>
-                      <button @click="deleteProduct(product.id)" class="btn btn-danger btn-sm">
-                        <i class="fas fa-trash"></i> Eliminar
                       </button>
                     </div>
                   </div>
@@ -103,13 +101,13 @@
           </div>
           <div v-else-if="viewMode === 'orders'">
             <div class="order-summary-box">
-              <h4>📊 Análisis General de Pedidos!</h4>
+              <h4>📊 Análisis General de Pedidos</h4>
               <p>{{ orderSummary }}</p>
             </div>
             <h3>Todos los Pedidos</h3>
             <div class="filters">
               <select v-model="searchEmail">
-                <option value="">Todos los usuarios</option>
+                <option value="">Todos los correos</option>
                 <option v-for="email in uniqueEmails" :key="email" :value="email">
                   {{ email }}
                 </option>
@@ -155,68 +153,56 @@
             </div>
 
 
-            <div class="total-base-box">
-              <h4>💰 Total Base de Pedidos: ${{ formatPrice(totalBaseAllOrders) }}</h4>
-            </div>
-            <button @click="refrescar()">Refrescar</button>
+
             <div v-if="filteredOrders.length > 0" class="orders-list">
               <div v-for="order in filteredOrders" :key="order.id" class="order-card">
                 <div class="order-header">
                   <div>
-                    <p><strong>Compra del Usuario:</strong> {{ order.user_name }}</p>
+                    <p><strong>Compra del Usuario:</strong> {{ order.userEmail }}</p>
                     <h5>Pedido #{{ order.id }}</h5>
-                    <p class="order-date">{{ formatDate(order.created_at?.toDate?.() || order.created_at) }}</p>
-                  </div>
-                  <div>
-                    <!-- <p><strong>data</strong> {{ order }}</p> -->
+                    <p class="order-date">{{ formatDate(order.createdAt?.toDate?.() || order.createdAt) }}</p>
                   </div>
                   <div class="order-meta">
                     <span :class="['order-status', order.status.toLowerCase()]">{{ order.status }}</span>
-                    <p><strong>Total:</strong> ${{ formatPrice(computeOrderBaseTotal(order)) }}</p>
-                  </div>
-                  <div class="order-actions">
-                    <button @click="deleteOrder(order.id)" class="btn btn-danger btn-sm">🗑️ Delete Order</button>
+                    <p><strong>Unidades:</strong> {{ totalItems(order) }}</p>
+                    <p><strong>Total:</strong> ${{ formatPrice(order.total) }}</p>
                   </div>
                 </div>
 
                 <div class="order-items">
                   <div v-for="(item, itemIdx) in order.items" :key="item.id" class="order-item">
-                    <img :src="item.imagen || 'https://via.placeholder.com/80'" :alt="item.name" class="item-image" />
+                    <img :src="item.image || 'https://via.placeholder.com/80'" :alt="item.name" class="item-image" />
                     <div class="item-details">
-                      <h5>{{ item.product_name }}</h5>
+                      <h5>{{ item.name }}</h5>
                       <p>Precio unitario: ${{ formatPrice(item.price) }}</p>
                       <p>Cantidad: {{ item.recipients?.length || 1 }}</p>
                       <p>Subtotal: ${{ formatPrice(item.price * (item.recipients?.length || 1)) }}</p>
-                      <button @click="deleteOrderItem(item.id)" class="btn btn-warning btn-sm">🗑️ Delete Item</button>
                     </div>
                   </div>
                 </div>
 
+                <!-- Botón para mostrar/ocultar destinatarios -->
                 <button class="btn btn-sm toggle-recipients" @click="toggleRecipients(order.id)">
-                  {{ showRecipients[order.identification] ? 'Ocultar' : 'Mostrar' }} destinatarios
+                  {{ showRecipients[order.id] ? 'Ocultar' : 'Mostrar' }} destinatarios
                 </button>
 
+                <!-- Sección editable de destinatarios -->
                 <div v-if="showRecipients[order.id]" class="recipients-list">
-                  <template v-for="(item, itemIdx) in order.items" :key="item.id || itemIdx">
+                  <template v-for="(item, itemIdx) in order.items" :key="item.id">
                     <div v-if="(item.recipients?.length || 0) > 0" class="recipient-block">
                       <h5>📦 {{ item.name }} ({{ item.recipients.length }} destinatario{{ item.recipients.length > 1 ?
                         's' : '' }})</h5>
-                      <div v-for="(recipient, idx) in item.recipients"
-                        :key="recipient.id || `${recipient.name}-${recipient.identification}-${idx}`"
-                        class="recipient-entry">
-
+                      <!-- {{db}} -->
+                      <div v-for="(recipient, idx) in item.recipients" :key="idx" class="recipient-entry">
                         <input v-model="recipient.name" :placeholder="`Nombre ${idx + 1}`" />
-                        <input v-model="recipient.identification" :placeholder="`CC ${idx + 1}`" />
-                        <button class="btn btn-danger btn-sm"
-                          @click="handleRecipientDeletion(order.id, itemIdx, recipient, idx)">
-                          ❌
-                        </button>
+                        <input v-model="recipient.id" :placeholder="`CC ${idx + 1}`" />
+                        <!-- <button class="btn btn-danger btn-sm"
+                          @click="removeRecipient(order.id, itemIdx, idx)">❌</button> -->
                       </div>
-                      <button class="btn btn-success btn-sm" @click="updateFullOrder(order.id)">
+                      <button class="btn btn-success btn-sm"
+                        @click="updateItemRecipients(order.userId, order.id, itemIdx, item.recipients)">
                         💾 Guardar destinatarios
                       </button>
-                      <button class="btn btn-success btn-sm" @click="addRecipient(order.id, itemIdx)">➕ Add
-                        Recipient</button>
                     </div>
                   </template>
                 </div>
@@ -255,22 +241,22 @@
 </template>
 <script setup>
 import { ref, onMounted, computed, reactive } from 'vue'
+import { db } from '@/services/firebase'
 import { useStore } from '@/store'
+// import { allOrders } from '@/stores/orders' // si lo usas desde store
+import { collection, getDocs, addDoc, updateDoc, doc, collectionGroup } from 'firebase/firestore'
 const searchEmail = ref('')
 const searchOrderId = ref('')
 const selectedStatus = ref('')
 const startDate = ref('')
 const endDate = ref('')
-const isLoading = ref(true)
 const sortBy = ref('fecha-desc')
 const allOrders = ref([])
-const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
-const API_BASE_URLdev = "http://localhost:5000"
-const VITE_API_URL = "https://backendpython1.onrender.com/chat"
+
 const filteredOrders = computed(() => {
   return allOrders.value
     .filter(order => {
-      const matchesEmail = !searchEmail.value || order.user_name?.toLowerCase().includes(searchEmail.value.toLowerCase())
+      const matchesEmail = !searchEmail.value || order.userEmail?.toLowerCase().includes(searchEmail.value.toLowerCase())
       const matchesStatus = !selectedStatus.value || order.status === selectedStatus.value
       const matchesOrderId = !searchOrderId.value || order.id?.toLowerCase().includes(searchOrderId.value.toLowerCase())
 
@@ -295,7 +281,6 @@ const isAdmin = computed(() => store.user?.isAdmin)
 const viewMode = ref('new')
 const isEditing = ref(false)
 const currentProductId = ref(null)
-const priceRange = ref([0, 2000])
 
 const newProduct = ref({
   name: '',
@@ -310,48 +295,9 @@ const imageInput = ref('')
 const products = ref([])
 
 const loadProducts = async () => {
-  try {
-    isLoading.value = true
-
-    let url = `${API_BASE_URL}/api/products`
-
-    // Add sorting query params if needed
-    if (sortBy.value === 'price-asc') {
-      url += '?sort=price_asc'
-    } else if (sortBy.value === 'price-desc') {
-      url += '?sort=price_desc'
-    } else if (sortBy.value === 'newest') {
-      url += '?sort=newest'
-    }
-
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Failed to fetch products')
-
-    const data = await res.json()
-
-    products.value = data.map(p => ({
-      ...p,
-      rating: p.rating || 0,
-      originalPrice: p.originalPrice || null,
-      discount: p.discount || 0
-    }))
-
-    if (products.value.length > 0) {
-      const prices = products.value.map(p => p.price)
-      const maxPrice = Math.max(...prices)
-      priceRange.value = [0, Math.ceil(maxPrice / 100) * 100]
-    }
-
-  } catch (error) {
-    console.error('❌ Error fetching products:', error)
-    alert('Failed to fetch products')
-  } finally {
-    isLoading.value = false
-  }
+  const snapshot = await getDocs(collection(db, 'products'))
+  products.value = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
 }
-
-
-
 const formatDate = (dateString) => {
   if (!dateString) return ''
   const options = { year: 'numeric', month: 'long', day: 'numeric' }
@@ -360,20 +306,22 @@ const formatDate = (dateString) => {
 const formatPrice = (p) =>
   Number(p).toLocaleString('es-CO', { minimumFractionDigits: 2 })
 
-
+const convertDriveUrl = (url) => {
+  if (url.includes('drive.google.com/uc?')) return url
+  const match = url.match(/[\/=]([a-zA-Z0-9_-]{25,})/)
+  const id = match?.[1]
+  return id ? `https://drive.google.com/uc?export=view&id=${id}` : url
+}
 
 const updateImagePreview = () => {
-  newProduct.value.image = imageInput.value
+  newProduct.value.image = convertDriveUrl(imageInput.value)
 }
-function computeOrderBaseTotal(order) {
-  return order.items.reduce((total, item) => {
-    const count = item.recipients?.length || 1
-    return total + item.price * count
-  }, 0)
+const totalItems = (order) =>
+  order.items.reduce((sum, item) => sum + item.quantity, 0)
+
+const handleImageError = (e) => {
+  e.target.src = 'https://via.placeholder.com/300'
 }
-const totalBaseAllOrders = computed(() =>
-  filteredOrders.value.reduce((sum, order) => sum + computeOrderBaseTotal(order), 0)
-)
 
 const editProduct = (product) => {
   isEditing.value = true
@@ -384,53 +332,19 @@ const editProduct = (product) => {
 }
 
 const addProduct = async () => {
-  const data = {
-    name: newProduct.value.name,
-    price: parseFloat(newProduct.value.price),
-    stock: parseInt(newProduct.value.stock),
-    category: newProduct.value.category,
-    description: newProduct.value.description,
-    image: newProduct.value.image
+  const data = { ...newProduct.value }
+
+  if (isEditing.value) {
+    await updateDoc(doc(db, 'products', currentProductId.value), data)
+    alert('Producto actualizado')
+  } else {
+    await addDoc(collection(db, 'products'), data)
+    alert('Producto creado')
   }
-  console.log("✅ Data a enviar:", data)
-  try {
-    let res
 
-    if (isEditing.value) {
-      console.log('Updating product', currentProductId.value)
-      res = await fetch(`${API_BASE_URL}/api/products/${currentProductId.value}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      })
-
-      if (!res.ok) throw new Error('Failed to update product')
-      alert('✅ Producto actualizado')
-    } else {
-      res = await fetch(`${API_BASE_URL}/api/products`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      })
-
-      if (!res.ok) throw new Error('Failed to create product')
-      alert('✅ Producto creado')
-    }
-
-    resetForm()
-    await loadProducts()
-
-  } catch (error) {
-    console.error("❌ Error guardando producto:", error)
-    alert("Ocurrió un error al guardar el producto.")
-  }
+  resetForm()
+  await loadProducts()
 }
-
-
 
 const resetForm = () => {
   isEditing.value = false
@@ -447,33 +361,17 @@ const resetForm = () => {
 }
 
 
+
 const loadAllOrders = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/orders/with-details`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch orders: ${response.status}`);
-    }
-
-    const orders = await response.json();
-    console.log("✅ Orders with recipients received:", orders);
-
-    // ✅ Save to state so frontend can render them
-    allOrders.value = orders;
-
-  } catch (error) {
-    console.error("❌ Error loading detailed orders:", error);
-  }
-};
+  const snapshot = await getDocs(collectionGroup(db, 'orders'))
+  allOrders.value = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }))
+}
 
 
-
-const uniqueEmails = computed(() => [...new Set(allOrders.value.map(o => o.user_name).filter(Boolean))])
+const uniqueEmails = computed(() => [...new Set(allOrders.value.map(o => o.userEmail).filter(Boolean))])
 const uniqueOrderIds = computed(() => [...new Set(allOrders.value.map(o => o.id).filter(Boolean))])
 const uniqueItemNames = computed(() => {
   const allNames = allOrders.value.flatMap(o => o.items?.map(i => i.name) || [])
@@ -497,7 +395,53 @@ function toggleRecipients(orderId) {
   showRecipients[orderId] = !showRecipients[orderId]
 }
 
+async function removeRecipient(orderId, itemIdx, recipientIdx) {
+  const orderRef = doc(db, 'users', userId, 'orders', orderId)
+  const order = allOrders.value.find(o => o.id === orderId)
+  if (!order || !order.items[itemIdx]) return
 
+  order.items[itemIdx].recipients.splice(recipientIdx, 1)
+
+  await updateDoc(orderRef, {
+    items: order.items
+  })
+}
+
+async function updateItemRecipients(userId, orderId, itemIdx, recipients) {
+  try {
+    const orderRef = doc(db, 'users', userId, 'orders', orderId)
+    const order = allOrders.value.find(o => o.id === orderId)
+    if (!order || !order.items[itemIdx]) return
+
+    // 🔧 Convertir los recipients en una copia pura (sin reactividad)
+    const plainRecipients = recipients.map(r => ({
+      name: r.name || '',
+      id: r.id || '',
+    }))
+
+    // 🔧 Crear copia limpia de todos los items
+    const plainItems = order.items.map((item, idx) => {
+      return {
+        id: item.id,
+        name: item.name,
+        image: item.image,
+        price: item.price,
+        category: item.category,
+        quantity: item.quantity,
+        recipients: idx === itemIdx ? plainRecipients : item.recipients?.map(r => ({ ...r })) || []
+      }
+    })
+
+    await updateDoc(orderRef, {
+      items: plainItems
+    })
+
+    alert('✅ Destinatarios actualizados correctamente.')
+  } catch (error) {
+    console.error('Error al actualizar destinatarios:', error)
+    alert('❌ Error al guardar destinatarios. Revisa consola.')
+  }
+}
 
 
 const showChat = ref(false)
@@ -510,9 +454,10 @@ const sendMessage = async () => {
   if (!userInput.value.trim()) return;
 
   messages.value.push({ role: "user", content: userInput.value });
-
+  const VITE_API_URL_local= "http://127.0.0.1:5000/chat"
+  const VITE_API_URL= "https://backendpython1.onrender.com/chat"
   try {
-    const res = await fetch(`${API_BASE_URL}/api/chat`, {
+    const res = await fetch(`${VITE_API_URL_local}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -539,210 +484,22 @@ const sendMessage = async () => {
   userInput.value = "";
 };
 
-const refrescar = async () => {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/refresh_orders`, {
-      method: 'GET',
-    })
-    const data = await res.json()
-    console.log(data) 
-    orderSummary.value = data.summary || "Sin análisis disponible."
-  } catch (e) {
-    console.error("Error al obtener análisis:", e)
-    orderSummary.value = "Error al cargar el análisis."
-  }
-}
-
-
 
 const orderSummary = ref("Cargando análisis...")
 
 const loadOrderSummary = async () => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/refresh_orders`, {
-      method: 'GET',
-    })
+    const res = await fetch("https://backendpython1.onrender.com/order-summary")
     const data = await res.json()
-    console.log(data) 
     orderSummary.value = data.summary || "Sin análisis disponible."
   } catch (e) {
     console.error("Error al obtener análisis:", e)
     orderSummary.value = "Error al cargar el análisis."
   }
 }
-
-async function deleteOrder(orderId) {
-  if (!confirm("Are you sure you want to delete this order?")) return;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
-      method: 'DELETE'
-    });
-
-    if (!res.ok) throw new Error("Failed to delete order");
-
-    alert("✅ Order deleted");
-    await loadAllOrders();
-  } catch (err) {
-    console.error("❌ Error deleting order:", err);
-    alert("Error deleting order");
-  }
-}
-async function deleteOrderItem(itemId) {
-  if (!confirm("Are you sure you want to delete this item?")) return;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/orders/item/${itemId}`, {
-      method: 'DELETE'
-    });
-
-    if (!res.ok) throw new Error("Failed to delete item");
-
-    alert("✅ Item deleted");
-    await loadAllOrders();
-  } catch (err) {
-    console.error("❌ Error deleting item:", err);
-    alert("Error deleting item");
-  }
-}
-
-async function deleteRecipient(recipientId) {
-  const order = allOrders.value.find(order =>
-    order.items.some(item =>
-      item.recipients?.some(rec => rec.id === recipientId)
-    )
-  )
-  const item = order?.items.find(item =>
-    item.recipients?.some(rec => rec.id === recipientId)
-  )
-
-  // ✅ Block deletion if this is the last recipient
-  if (item?.recipients?.length === 1) {
-    alert("❌ You must have at least one recipient.")
-    return
-  }
-
-  if (!confirm("Delete this recipient?")) return;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/orders/recipient/${recipientId}`, {
-      method: 'DELETE'
-    });
-
-    if (!res.ok) throw new Error("Failed to delete recipient");
-
-    alert("✅ Recipient deleted");
-    await loadAllOrders();
-  } catch (err) {
-    console.error("❌ Error deleting recipient:", err);
-    alert("Error deleting recipient");
-  }
-}
-function addRecipient(orderId, itemIndex) {
-  const order = allOrders.value.find(o => o.id === orderId)
-  if (!order || !order.items[itemIndex]) return
-
-  if (!order.items[itemIndex].recipients) {
-    order.items[itemIndex].recipients = []
-  }
-
-  order.items[itemIndex].recipients.push({
-    id: uuid(),
-    name: '',
-    identification: ''
-  })
-}
-function handleRecipientDeletion(orderId, itemIdx, recipient, recipientIdx) {
-  if (recipient.id) {
-    deleteRecipient(recipient.id)
-  } else {
-    // Elimina del frontend sin llamar al backend
-    const order = allOrders.value.find(o => o.id === orderId)
-    if (!order || !order.items[itemIdx]) return
-
-    if ((order.items[itemIdx].recipients || []).length <= 1) {
-      alert("❌ Debe haber al menos un destinatario.")
-      return
-    }
-
-    order.items[itemIdx].recipients.splice(recipientIdx, 1)
-  }
-}
-function uuid() {
-  return '_' + Math.random().toString(36).substr(2, 9)
-}
-async function updateFullOrder(orderId) {
-  const order = allOrders.value.find(o => o.id === orderId)
-  if (!order) return
-
-  // ✅ Limpiar recipients vacíos o repetidos
-  const cleanItems = order.items.map(item => {
-    const recipients = (item.recipients || []).filter(r => r.name && r.identification)
-
-    const seen = new Set()
-    const deduped = recipients.filter(r => {
-      const key = `${r.name.trim().toLowerCase()}|${r.identification.trim()}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-
-    return {
-      product_id: item.product_id,
-      price: item.price,
-      imagen: item.imagen,
-      recipients: deduped
-    }
-  })
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/full`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: cleanItems, status: order.status })
-    })
-
-    const result = await res.json()
-    if (!res.ok) throw new Error(result.error || 'Falló la actualización')
-
-    alert("✅ Orden actualizada completamente")
-    await loadAllOrders()  // refresca todo
-  } catch (err) {
-    console.error("❌ Error actualizando orden completa:", err)
-    alert("Error al guardar cambios")
-  }
-}
-async function deleteProduct(productId) {
-  if (!confirm("¿Estás seguro de eliminar este producto?")) return;
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
-      method: 'DELETE'
-    });
-
-    if (!res.ok) throw new Error("❌ Falló la eliminación");
-
-    alert("✅ Producto eliminado");
-    await loadProducts(); // recarga la lista
-  } catch (err) {
-    console.error("❌ Error al eliminar producto:", err);
-    alert("Error al eliminar producto");
-  }
-}
-
-
 </script>
 
 <style scoped>
-.total-base-box {
-  background: #f3f3f3;
-  border: 1px solid #ddd;
-  padding: 10px 15px;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  font-weight: bold;
-}
-
 .order-summary-box {
   background-color: #f0f8ff;
   padding: 1rem;
