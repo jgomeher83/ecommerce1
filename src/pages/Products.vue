@@ -199,7 +199,7 @@ import { db } from '@/services/firebase'
 const store = useStore()
 const products = ref([])
 const isLoading = ref(true)
-const API_BASE_URL = "http://api.apuntatealpaseo.com.co"
+const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
 const API_BASE_URLdev = "http://localhost:5000"
 // Filtros
 const selectedCategories = ref([])

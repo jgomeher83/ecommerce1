@@ -46,7 +46,7 @@ const store = useStore()
 const isLoading = ref(true)
 const products = ref([])
 const priceRange = ref([0, 2000])
-const API_BASE_URL = "http://api.apuntatealpaseo.com.co"
+const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
 const API_BASE_URLdev = "http://localhost:5000"
 const sortBy = ref('fecha-desc')
 // Price formatting function
