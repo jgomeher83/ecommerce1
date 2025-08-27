@@ -23,7 +23,7 @@
             Carrito
             <span v-if="cartCount > 0" class="cart-count">{{ cartCount }}</span>
           </router-link>
-          <router-link to="/flights" class="nav-link" @click="closeMobileMenu">Vuelos</router-link>
+          <!-- <router-link to="/flights" class="nav-link" @click="closeMobileMenu">Vuelos</router-link> -->
           <router-link to="/myprofile" class="nav-link" @click="closeMobileMenu">Mi Perfil</router-link>
           <router-link v-if="user && user.isAdmin" to="/admin" class="nav-link" @click="closeMobileMenu">Admin</router-link>
           <router-link v-if="!user" to="/login" class="nav-link" @click="closeMobileMenu">Iniciar sesión</router-link>
