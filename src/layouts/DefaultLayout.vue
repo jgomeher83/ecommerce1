@@ -3,7 +3,7 @@
     <header class="header">
       <div class="container">
         <div class="logo">
-          <router-link to="/">Apúntate el Paseo</router-link>
+          <router-link to="/">Apúntate al Paseo</router-link>
         </div>
         
         <!-- Mobile menu button -->
@@ -38,7 +38,7 @@
 
     <footer class="footer">
       <div class="container">
-        <p>&copy; {{ new Date().getFullYear() }} Apúntate el Paseo. Todos los derechos reservados.</p>
+        <p>&copy; {{ new Date().getFullYear() }} Apúntate al Paseo. Todos los derechos reservados.</p>
       </div>
     </footer>
   </div>

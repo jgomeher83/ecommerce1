@@ -2,7 +2,7 @@
   <div class="home">
     <main class="container">
       <section class="hero">
-        <h1>Apúntate el Paseo</h1>
+        <h1>Apúntate al Paseo</h1>
         <p class="subtitle">Viaja, vive, recuerda!</p>
       </section>
       
