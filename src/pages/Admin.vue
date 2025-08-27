@@ -103,9 +103,9 @@
           </div>
           <div v-else-if="viewMode === 'orders'">
             <div class="order-summary-box">
-              <h4>📊 Análisis General de Pedidos!</h4>
-              <p>{{ orderSummary }}</p>
-            </div>
+  <h4>📊 Análisis General de Pedidos</h4>
+  <pre class="order-summary-pre">{{ orderSummary }}</pre>
+</div>
             <h3>Todos los Pedidos</h3>
             <div class="filters">
               <select v-model="searchEmail">
@@ -187,7 +187,7 @@
                       <p>Precio unitario: ${{ formatPrice(item.price) }}</p>
                       <p>Cantidad: {{ item.recipients?.length || 1 }}</p>
                       <p>Subtotal: ${{ formatPrice(item.price * (item.recipients?.length || 1)) }}</p>
-                      <button @click="deleteOrderItem(item.id)" class="btn btn-warning btn-sm">🗑️ Delete Item</button>
+                      <!-- <button @click="deleteOrderItem(item.id)" class="btn btn-warning btn-sm">🗑️ Delete Item</button> -->
                     </div>
                   </div>
                 </div>
@@ -429,7 +429,23 @@ const addProduct = async () => {
     alert("Ocurrió un error al guardar el producto.")
   }
 }
+async function deleteProduct(productId) {
+  if (!confirm("¿Estás seguro de eliminar este producto?")) return;
 
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
+      method: 'DELETE'
+    });
+
+    if (!res.ok) throw new Error("❌ Falló la eliminación");
+
+    alert("✅ Producto eliminado");
+    await loadProducts(); // recarga la lista
+  } catch (err) {
+    console.error("❌ Error al eliminar producto:", err);
+    alert("Error al eliminar producto");
+  }
+}
 
 
 const resetForm = () => {
@@ -545,7 +561,8 @@ const refrescar = async () => {
       method: 'GET',
     })
     const data = await res.json()
-    console.log(data) 
+    // console.log(data) 
+    loadAllOrders()
     orderSummary.value = data.summary || "Sin análisis disponible."
   } catch (e) {
     console.error("Error al obtener análisis:", e)
@@ -588,23 +605,23 @@ async function deleteOrder(orderId) {
     alert("Error deleting order");
   }
 }
-async function deleteOrderItem(itemId) {
-  if (!confirm("Are you sure you want to delete this item?")) return;
+// async function deleteOrderItem(itemId) {
+//   if (!confirm("Are you sure you want to delete this item?")) return;
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/orders/item/${itemId}`, {
-      method: 'DELETE'
-    });
+//   try {
+//     const res = await fetch(`${API_BASE_URL}/api/orders/item/${itemId}`, {
+//       method: 'DELETE'
+//     });
 
-    if (!res.ok) throw new Error("Failed to delete item");
+//     if (!res.ok) throw new Error("Failed to delete item");
 
-    alert("✅ Item deleted");
-    await loadAllOrders();
-  } catch (err) {
-    console.error("❌ Error deleting item:", err);
-    alert("Error deleting item");
-  }
-}
+//     alert("✅ Item deleted");
+//     await loadAllOrders();
+//   } catch (err) {
+//     console.error("❌ Error deleting item:", err);
+//     alert("Error deleting item");
+//   }
+// }
 
 async function deleteRecipient(recipientId) {
   const order = allOrders.value.find(order =>
@@ -712,23 +729,7 @@ async function updateFullOrder(orderId) {
     alert("Error al guardar cambios")
   }
 }
-async function deleteProduct(productId) {
-  if (!confirm("¿Estás seguro de eliminar este producto?")) return;
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
-      method: 'DELETE'
-    });
-
-    if (!res.ok) throw new Error("❌ Falló la eliminación");
-
-    alert("✅ Producto eliminado");
-    await loadProducts(); // recarga la lista
-  } catch (err) {
-    console.error("❌ Error al eliminar producto:", err);
-    alert("Error al eliminar producto");
-  }
-}
 
 
 </script>
@@ -743,13 +744,73 @@ async function deleteProduct(productId) {
   font-weight: bold;
 }
 
-.order-summary-box {
-  background-color: #f0f8ff;
-  padding: 1rem;
-  border-left: 5px solid #007bff;
-  margin-bottom: 1.5rem;
-  border-radius: 8px;
+.order-summary-box{
+  /* Card */
+  --bg: #ffffff;
+  --fg: #111827;
+  --border: #e5e7eb;
+  --shadow: 0 10px 24px rgba(0,0,0,.06);
+
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
 }
+
+.order-summary-box h4{
+  margin: 0 0 10px;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+/* El contenido del LLM */
+.order-summary-pre{
+  /* Preserva saltos y envuelve palabras largas */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: auto;
+
+  /* Tipografía y espaciado */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: .95rem;
+  line-height: 1.55;
+  tab-size: 2;
+
+  /* Caja */
+
+  border: 1px dashed #334155;
+  border-radius: 12px;
+  padding: 12px 14px;
+  max-height: 420px;          /* ajusta si necesitas más/menos alto */
+}
+
+/* Scrollbar sutil (Chromium/WebKit) */
+.order-summary-pre::-webkit-scrollbar{ height: 10px; width: 10px; }
+.order-summary-pre::-webkit-scrollbar-track{ background: transparent; }
+.order-summary-pre::-webkit-scrollbar-thumb{
+  background: rgba(148,163,184,.45);
+  border-radius: 999px;
+}
+.order-summary-pre:hover::-webkit-scrollbar-thumb{
+  background: rgba(148,163,184,.75);
+}
+
+/* Modo oscuro automático si el sistema lo usa */
+/* @media (prefers-color-scheme: dark){
+  .order-summary-box{
+    --bg: #0b1220;
+    --fg: #e6ebf5;
+    --border: #1f2a44;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .order-summary-pre{
+    background: #0a0f1c;
+    border-color: #223044;
+    color: #dfe6f5;
+  }
+} */
 
 .chat-button {
   position: fixed;

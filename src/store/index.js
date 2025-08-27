@@ -2,13 +2,16 @@ import { defineStore } from 'pinia'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/services/firebase'
-
+const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
+const API_BASE_URLdev = "http://localhost:5000"
 export const useStore = defineStore('main', {
   state: () => ({
     isLoading: false,
     cart: [],
     user: null,
-    products: []
+    products: [],
+    priceRange: [],
+    sortBy: null
   }),
   getters: {
     cartCount: (state) => state.cart.reduce((count, item) => count + item.quantity, 0),
@@ -17,12 +20,41 @@ export const useStore = defineStore('main', {
   },
   actions: {
     async fetchProducts() {
-      this.isLoading = true
       try {
-        // Fetch products from API or service
-        // this.products = await productService.getAll()
+        this.isLoading = true;
+
+        let url = `${API_BASE_URL}/api/products`;
+
+        // Add sorting query params if needed
+        if (this.sortBy === 'price-asc') {
+          url += '?sort=price_asc';
+        } else if (this.sortBy === 'price-desc') {
+          url += '?sort=price_desc';
+        } else if (this.sortBy === 'newest') {
+          url += '?sort=newest';
+        }
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch products');
+
+        const data = await res.json();
+
+        this.products = data.map(p => ({
+          ...p,
+          rating: p.rating || 0,
+          originalPrice: p.originalPrice || null,
+          discount: p.discount || 0
+        }));
+
+        if (this.products.length > 0) {
+          const prices = this.products.map(p => p.price);
+          const maxPrice = Math.max(...prices);
+          this.priceRange = [0, Math.ceil(maxPrice / 100) * 100];
+        }
+
       } catch (error) {
-        console.error('Error fetching products:', error)
+        console.error('❌ Error fetching products:', error);
+        alert('Failed to fetch products');
       } finally {
         this.isLoading = false
       }

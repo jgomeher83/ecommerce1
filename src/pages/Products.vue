@@ -193,66 +193,18 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStore } from '@/store'
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-
+import { storeToRefs } from 'pinia'
 const store = useStore()
-const products = ref([])
-const isLoading = ref(true)
-const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
-const API_BASE_URLdev = "http://localhost:5000"
+const { isLoading, products, priceRange, sortBy } = storeToRefs(store)
+
 // Filtros
 const selectedCategories = ref([])
-const priceRange = ref([0, 2000])
 const minRating = ref(0)
-const sortBy = ref('featured')
 const viewMode = ref('grid')
 
 // Paginación
 const currentPage = ref(1)
 const itemsPerPage = 12
-
-// Fetch products from Firestore
-const fetchProducts = async () => {
-  try {
-    isLoading.value = true
-
-    let url = `${API_BASE_URL}/api/products`
-
-    // Add sorting query params if needed
-    if (sortBy.value === 'price-asc') {
-      url += '?sort=price_asc'
-    } else if (sortBy.value === 'price-desc') {
-      url += '?sort=price_desc'
-    } else if (sortBy.value === 'newest') {
-      url += '?sort=newest'
-    }
-
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Failed to fetch products')
-
-    const data = await res.json()
-
-    products.value = data.map(p => ({
-      ...p,
-      rating: p.rating || 0,
-      originalPrice: p.originalPrice || null,
-      discount: p.discount || 0
-    }))
-
-    if (products.value.length > 0) {
-      const prices = products.value.map(p => p.price)
-      const maxPrice = Math.max(...prices)
-      priceRange.value = [0, Math.ceil(maxPrice / 100) * 100]
-    }
-
-  } catch (error) {
-    console.error('❌ Error fetching products:', error)
-    alert('Failed to fetch products')
-  } finally {
-    isLoading.value = false
-  }
-}
 
 
 // Computed properties for filtering and sorting
@@ -297,7 +249,7 @@ const sortedProducts = computed(() => {
 
 // Update products when sort changes
 watch(sortBy, () => {
-  fetchProducts()
+  store.fetchProducts()
 })
 
 // Pagination
@@ -323,8 +275,8 @@ const categoryCounts = computed(() => {
 })
 
 // Initialize
-onMounted(() => {
-  fetchProducts()
+onMounted(async () => {
+  await store.fetchProducts()
 })
 
 // Resetear todos los filtros

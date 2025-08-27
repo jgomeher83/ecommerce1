@@ -1,6 +1,6 @@
 <template>
   <div class="product-page">
-    <div v-if="loading" class="loading">Cargando producto...</div>
+    <div v-if="isLoading" class="isLoading">Cargando producto...</div>
     
     <div v-else-if="product" class="product-container">
       <!-- Botón de volver -->
@@ -60,57 +60,33 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useStore } from '@/store'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-
-const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
-const API_BASE_URLdev = "http://localhost:5000"
+import { storeToRefs } from 'pinia'
 
 const route = useRoute()
 const store = useStore()
+const { isLoading, products, priceRange, sortBy } = storeToRefs(store)
 
-const productId = route.params.id
-const product = ref(null)
-const loading = ref(true)
 const quantity = ref(1)
 
-// Price formatting function
+// Producto reactivo según la ruta
+const productId = computed(() => route.params.id)
+const product = computed(() =>
+  products.value.find(p => String(p.id) === String(productId.value))
+)
+
+// Formateo de precio
 const formatPrice = (price) => {
-  const number = Number(price);
+  const number = Number(price)
   return number.toLocaleString('es-CO', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  });
+  })
 }
 
-// Fetch product from Firestore
-const fetchProduct = async () => {
-  try {
-    loading.value = true
-    const res = await fetch(`${API_BASE_URL}/api/products/${productId}`)
-    if (!res.ok) throw new Error('Producto no encontrado')
-
-    const data = await res.json()
-    product.value = {
-      ...data,
-      rating: data.rating || 0,
-      discount: data.discount || 0,
-      originalPrice: data.originalPrice || null
-    }
-
-  } catch (error) {
-    console.error('❌ Error al cargar producto:', error)
-    product.value = null
-  } finally {
-    loading.value = false
-  }
-}
-
-
-// Set document title based on product
+// Título de la página
 const updatePageTitle = () => {
   if (product.value) {
     document.title = `${product.value.name} | ${product.value.category ? product.value.category + ' | ' : ''}${import.meta.env.VITE_APP_NAME || 'Tienda'}`
@@ -119,26 +95,33 @@ const updatePageTitle = () => {
   }
 }
 
-// Watch for route changes to load new product
-watch(() => route.params.id, (newId) => {
-  if (newId) {
-    fetchProduct()
+// Carga inicial (si no hay productos, los trae)
+onMounted(async () => {
+  if (!products.value?.length) {
+    await store.fetchProducts()
   }
-}, { immediate: true })
+  updatePageTitle()
+})
 
-// Watch for product changes to update title
-watch(product, updatePageTitle, { immediate: true })
+// Si cambia el id de la ruta, actualiza el título (y aseguramos productos)
+watch(productId, async () => {
+  if (!products.value?.length) {
+    await store.fetchProducts()
+  }
+  updatePageTitle()
+})
+
+// Reacciona a cambios de product para actualizar título
+watch(product, updatePageTitle)
 
 const addToCart = () => {
   if (product.value) {
-    store.addToCart({
-      ...product.value,
-      quantity: quantity.value
-    })
+    store.addToCart({ ...product.value, quantity: quantity.value })
     quantity.value = 1
   }
 }
 </script>
+
 
 <style scoped>
 .product-page {
@@ -147,7 +130,7 @@ const addToCart = () => {
   padding: 2rem 1rem;
 }
 
-.loading {
+.isLoading {
   text-align: center;
   padding: 2rem;
   font-size: 1.1rem;

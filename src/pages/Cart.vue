@@ -73,7 +73,12 @@
                   Cédula {{ rIndex + 1 }}
                   <input v-model="recipient.id" type="text" placeholder="cc" />
                 </label>
-                <button class="remove-recipient-btn" @click="removeRecipient(item, rIndex)">×</button>
+                <button class="remove-recipient-btn" @click="removeRecipient(item, rIndex)"
+                  :disabled="!item.recipients || item.recipients.length <= 1"
+                  :aria-disabled="!item.recipients || item.recipients.length <= 1"
+                  :title="item.recipients?.length <= 1 ? 'Debe haber al menos 1 destinatario' : 'Eliminar destinatario'">
+                  ×
+                </button>
               </div>
 
               <!-- <button class="add-recipient-btn" @click="addRecipient(item)">Agregar destinatario</button> -->
@@ -170,7 +175,7 @@ const discount = computed(() => {
 })
 
 const total = computed(() => {
-  return subtotal.value + shippingCost.value 
+  return subtotal.value + shippingCost.value
 })
 
 // Price formatting function
@@ -184,7 +189,7 @@ const formatPrice = (price) => {
 
 const addRecipient = (item) => {
   if (!item.recipients) item.recipients = []
-    item.recipients.push({ name: '', identification: '' })
+  item.recipients.push({ name: '', identification: '' })
 
 }
 
@@ -224,15 +229,15 @@ const proceedToCheckout = async () => {
   console.log('🛒 Iniciando checkout...')
 
   try {
-    
+
     const orderData = {
       user_id: store.user?.uid || 'anonymous',
-      
+
       products: cartItems.value.map(item => ({
         product_id: item.id,
         qty: item.recipients?.length > 0 ? item.recipients.length : 1,
         recipients: item.recipients || [],
-      
+
       }))
     }
 

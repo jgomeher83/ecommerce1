@@ -38,76 +38,34 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { onMounted } from 'vue'
 import { useStore } from '@/store'
-
+import { storeToRefs } from 'pinia'
 
 const store = useStore()
-const isLoading = ref(true)
-const products = ref([])
-const priceRange = ref([0, 2000])
-const API_BASE_URL = "https://api.apuntatealpaseo.com.co"
-const API_BASE_URLdev = "http://localhost:5000"
-const sortBy = ref('fecha-desc')
-// Price formatting function
+const { isLoading, products, priceRange, sortBy } = storeToRefs(store)
+
+// Ajusta el sort inicial (tu 'fecha-desc' ≈ 'newest' en el store)
+sortBy.value = 'newest'
+
+// Formateo de precio
 const formatPrice = (price) => {
-  const number = Number(price);
+  const number = Number(price)
   return number.toLocaleString('es-CO', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  });
-}
-
-// Fetch products from Firestore
-const fetchProducts = async () => {
-  try {
-    isLoading.value = true
-
-    let url = `${API_BASE_URL}/api/products`
-
-    // Add sorting query params if needed
-    if (sortBy.value === 'price-asc') {
-      url += '?sort=price_asc'
-    } else if (sortBy.value === 'price-desc') {
-      url += '?sort=price_desc'
-    } else if (sortBy.value === 'newest') {
-      url += '?sort=newest'
-    }
-
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Failed to fetch products')
-
-    const data = await res.json()
-
-    products.value = data.map(p => ({
-      ...p,
-      rating: p.rating || 0,
-      originalPrice: p.originalPrice || null,
-      discount: p.discount || 0
-    }))
-
-    if (products.value.length > 0) {
-      const prices = products.value.map(p => p.price)
-      const maxPrice = Math.max(...prices)
-      priceRange.value = [0, Math.ceil(maxPrice / 100) * 100]
-    }
-
-  } catch (error) {
-    console.error('❌ Error fetching products:', error)
-    alert('Failed to fetch products')
-  } finally {
-    isLoading.value = false
-  }
+  })
 }
 
 onMounted(async () => {
-  await fetchProducts()
+  await store.fetchProducts()
 })
 
 const addToCart = (product) => {
   store.addToCart({ ...product, quantity: 1 })
 }
 </script>
+
 
 <style scoped>
 .home {

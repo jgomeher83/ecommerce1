@@ -6,6 +6,7 @@ import Cart from '@/pages/Cart.vue'
 import MyProfile from '@/pages/MyProfile.vue'
 import Product from '@/pages/Product.vue'
 import Admin from '@/pages/Admin.vue'
+import Flights from '@/pages/Flights.vue'
 import { useStore } from '@/store'
 
 const routes = [
@@ -46,6 +47,12 @@ const routes = [
     name: 'admin',
     component: Admin,
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/flights',
+    name: 'flights',
+    component: Flights,
+    meta: { requiresAuth: true }
   }
 ]
 
